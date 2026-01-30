@@ -4,7 +4,10 @@
 // $port = 8005;
 $messy_db = new mysqli('localhost', 'root', 'root', 'messy');
 
-http_response_code(200);
+// Enable CORS for web development
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json');
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
