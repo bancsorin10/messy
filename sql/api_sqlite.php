@@ -9,7 +9,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 $method = $_SERVER['REQUEST_METHOD'];
-$input = json_decode(file_get_contents('php://input'), true);
+ini_set('display_errors', 1);
 
 
 switch ($method) {
@@ -17,7 +17,64 @@ case 'GET':
     general_listing($_SERVER['PATH_INFO'], $messy_db);
     break;
 case 'POST':
+    handle_post($_SERVER['PATH_INFO'], $messy_db);
     break;
+}
+
+function save_photo() {
+    if (isset($_FILES['photo']['name'])) {
+        $upload_dir  = './images/';
+        $file_name = $_FILES['photo']['name'];
+        $target_path = $upload_dir . $file_name;
+        $type = mime_content_type($_FILES['photo']['tmp_name']);
+        if (!str_starts_with($type, "image/")) {
+            http_response_code(403);
+        }
+        $result = move_uploaded_file($_FILES['photo']['tmp_name'], $target_path);
+    }
+}
+
+function handle_post($path, $messy_db) {
+    // $input = json_decode(file_get_contents('php://input'), true);
+    // error_log(json_encode($input));
+    error_log(print_r($_POST, true));
+    if (isset($_FILES['photo']['name'])) {
+        $photo = $_FILES['photo']['name'];
+    } else {
+        $photo = null;
+    }
+    // error_log(print_r($_POST, true));
+    // error_log($path);
+    switch ($path) {
+    case '/add_cabinet':
+        save_photo();
+        // error_log('adding cabinet');
+        $stmt = $messy_db->prepare(
+            'insert into cabinets
+            (name, description, photo) values
+            (:name, :description, :photo)');
+        $stmt->bindParam(':name', $_POST['name'], SQLITE3_TEXT);
+        $stmt->bindParam(':description', $_POST['description'], SQLITE3_TEXT);
+        $stmt->bindParam(':photo', $photo, SQLITE3_TEXT);
+        error_log("executing " . $stmt->getSQL(true));
+        $stmt->execute();
+        break;
+    case '/add_item':
+        save_photo();
+        $stmt = $messy_db->prepare(
+            'insert into items
+            (name, description, photo, cabinet_id) values
+            (:name, :description, :photo, :id)');
+        $stmt->bindParam(':name', $_POST['name'], SQLITE3_TEXT);
+        $stmt->bindParam(':description', $_POST['description'], SQLITE3_TEXT);
+        $stmt->bindParam(':photo', $photo, SQLITE3_TEXT);
+        $stmt->bindValue(':id', $_POST['cabinet_id'], SQLITE3_INTEGER);
+        error_log("executing " . $stmt->getSQL(true));
+        $stmt->execute();
+        break;
+    default:
+        http_response_code(404);
+    }
 }
 
 function general_listing($path, $messy_db) {
@@ -26,7 +83,12 @@ function general_listing($path, $messy_db) {
     case '/cabinets':
         header('Content-Type: application/json');
         $result = $messy_db->query('select * from cabinets');
-        echo json_encode($result->fetchArray(SQLITE3_NUM));
+        $data = array();
+        while ($res = $result->fetchArray(SQLITE3_NUM)) {
+            array_push($data, $res);
+        }
+        // echo json_encode($result->fetchArray(SQLITE3_NUM));
+        echo json_encode($data);
         break;
     case '/items':
         header('Content-Type: application/json');
@@ -58,7 +120,11 @@ function general_listing($path, $messy_db) {
             $stmt = $messy_db->prepare('select * from items');
         }
         $result = $stmt->execute();
-        echo json_encode($result->fetchArray(SQLITE3_NUM));
+        $data = array();
+        while ($res = $result->fetchArray(SQLITE3_NUM)) {
+            array_push($data, $res);
+        }
+        echo json_encode($data);
         break;
     case str_starts_with($path, '/images'):
         header('Content-Type: image/png');
