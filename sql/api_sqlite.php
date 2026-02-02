@@ -19,6 +19,43 @@ case 'GET':
 case 'POST':
     handle_post($_SERVER['PATH_INFO'], $messy_db);
     break;
+case 'DELETE':
+    handle_delete($_SERVER['PATH_INFO'], $messy_db);
+default:
+    // http_response_code(404);
+}
+
+function get_all_rows($result) {
+    $data = array();
+    while ($res = $result->fetchArray(SQLITE3_NUM)) {
+        array_push($data, $res);
+    }
+
+    return $data;
+}
+
+function handle_delete($path, $messy_db) {
+    error_log(print_r($_DELETE, true));
+    http_response_code(200);
+    return true;
+    switch ($path):
+    case '/delete_item':
+        $stmt = $messy_db->prepare('delete from items where id=:id');
+        $stmt->bindValue(':id', $_DELETE['id'], SQLITE3_INTEGER);
+        $stmt->execute();
+        http_response_code(200);
+        break;
+    case '/delete_cabinet':
+        $stmt = $messy_db->prepare('delete from items where cabinet_id=:id');
+        $stmt->bindValue(':id', $_DELETE['id'], SQLITE3_INTEGER);
+        $stmt->execute();
+        $stmt = $messy_db->prepare('delete from cabinets where id=:id');
+        $stmt->bindValue(':id', $_DELETE['id'], SQLITE3_INTEGER);
+        $stmt->execute();
+        http_response_code(200);
+        break;
+    default:
+        http_response_code(404);
 }
 
 function save_photo() {
@@ -83,10 +120,7 @@ function general_listing($path, $messy_db) {
     case '/cabinets':
         header('Content-Type: application/json');
         $result = $messy_db->query('select * from cabinets');
-        $data = array();
-        while ($res = $result->fetchArray(SQLITE3_NUM)) {
-            array_push($data, $res);
-        }
+        $data = get_all_rows($result);
         // echo json_encode($result->fetchArray(SQLITE3_NUM));
         echo json_encode($data);
         break;
@@ -120,10 +154,7 @@ function general_listing($path, $messy_db) {
             $stmt = $messy_db->prepare('select * from items');
         }
         $result = $stmt->execute();
-        $data = array();
-        while ($res = $result->fetchArray(SQLITE3_NUM)) {
-            array_push($data, $res);
-        }
+        $data = fetch_all_rows($result);
         echo json_encode($data);
         break;
     case str_starts_with($path, '/images'):
