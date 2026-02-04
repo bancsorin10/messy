@@ -6,7 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:android": "yarn build android_apk",
+    "build:android-bundle": "yarn build android_bundle"
   },
   "dependencies": {
     "@react-navigation/native": "^7.1.28",
@@ -31,7 +33,8 @@
     "react-native-vector-icons": "^10.3.0",
     "react-native-vision-camera": "^4.7.3",
     "react-native-web": "^0.21.0",
-    "vision-camera-code-scanner": "^0.2.0"
+    "vision-camera-code-scanner": "^0.2.0",
+    "@expo/dev-client": "^0.15.1"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

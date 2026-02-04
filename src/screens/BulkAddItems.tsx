@@ -156,13 +156,7 @@ const BulkAddItems = () => {
                 parseInt(item.id.replace('item:', ''))
               );
               
-              await apiService.request('/bulk_add_items', {
-                method: 'POST',
-                data: {
-                  cabinet_id: cabinetId,
-                  item_ids: itemIds
-                }
-              });
+              await apiService.moveItems(cabinetId, itemIds);
               
               Alert.alert('Success', `${scannedItems.length} items added to cabinet`);
               setScannedItems([]);

@@ -12,7 +12,7 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, Item, NavigationParamList } from '../types';
-import { apiService, parseAPIResponse } from '../services/api';
+import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
 
 type NavigationProp = StackNavigationProp<NavigationParamList, 'CabinetDetails'>;
 
@@ -25,17 +25,10 @@ const CabinetDetails = () => {
   const navigation = useNavigation<NavigationProp>();
   const { cabinetId } = route.params as { cabinetId: number };
 
-  const loadItems = async () => {
+const loadItems = async () => {
     try {
       const response = await apiService.getItems(cabinetId);
-      // Parse array format: [id, name, description, photo, cabinet_id]
-      const parsedItems: Item[] = parseAPIResponse(response).map((item: any) => ({
-        id: item[0],
-        name: item[1] || `Item ${item[0]}`,
-        description: item[2],
-        photo: item[3],
-        cabinet_id: item[4]
-      }));
+      const parsedItems: Item[] = parseAPIResponse(response);
       setItems(parsedItems);
     } catch (error) {
       console.error('Failed to load items:', error);
@@ -44,8 +37,99 @@ const CabinetDetails = () => {
     }
   };
 
-  const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
+const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
     navigation.navigate('QRCodeDisplay', { type, id, name });
+  };
+
+  const handleDeleteItem = (itemId: number, itemName: string) => {
+    console.log('🗑️ Delete button pressed for item:', itemId, itemName);
+    
+    Alert.alert(
+      'Delete Item',
+      `Are you sure you want to delete "${itemName}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => executeDeleteItem(itemId)
+        }
+      ]
+    );
+  };
+
+  const executeDeleteItem = async (itemId: number) => {
+    try {
+      console.log('🗑️ Executing delete for item:', itemId);
+      const response = await apiService.deleteItem(itemId);
+      console.log('✅ Item deleted successfully:', response);
+      Alert.alert('Success', 'Item deleted successfully');
+      loadItems(); // Refresh list
+    } catch (error: any) {
+      console.error('❌ Failed to delete item:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
+      Alert.alert('Error', `Failed to delete item: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
+  const executeDeleteCabinet = async () => {
+    try {
+      console.log('🗑️ Executing delete for cabinet:', cabinetId);
+      const response = await apiService.deleteCabinet(cabinetId);
+      console.log('🗑️ Delete response:', response);
+      if (typeof window !== 'undefined') {
+        alert('Cabinet and all its items deleted successfully');
+      } else {
+        Alert.alert('Success', 'Cabinet and all its items deleted successfully');
+      }
+      navigation.goBack();
+    } catch (error) {
+      console.error('❌ Failed to delete cabinet:', error);
+      if (typeof window !== 'undefined') {
+        alert('Failed to delete cabinet');
+      } else {
+        Alert.alert('Error', 'Failed to delete cabinet');
+      }
+    }
+  };
+
+  const handleDeleteCabinet = () => {
+    // Get item count to show warning if needed
+    const itemCount = items.length;
+    
+    console.log('🗑️ Delete cabinet button pressed:', { cabinetId, itemCount });
+    
+    if (typeof window !== 'undefined') {
+      // Web - use native confirm
+      const message = itemCount > 0 
+        ? `This cabinet contains ${itemCount} item(s). Deleting this cabinet will also delete all items inside. Are you sure you want to continue?`
+        : `Are you sure you want to delete this cabinet? This action cannot be undone.`;
+      
+      if (confirm(message)) {
+        executeDeleteCabinet();
+      }
+    } else {
+      // React Native - use Alert
+      Alert.alert(
+        'Delete Cabinet',
+        itemCount > 0 
+          ? `This cabinet contains ${itemCount} item(s). Deleting this cabinet will also delete all items inside. Are you sure you want to continue?`
+          : `Are you sure you want to delete this cabinet? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: () => executeDeleteCabinet()
+          }
+        ]
+      );
+    }
   };
 
   useEffect(() => {
@@ -54,16 +138,16 @@ const CabinetDetails = () => {
   }, [cabinetId]);
 
   const renderItem = ({ item }: { item: Item }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => navigation.navigate('ItemDetails', { itemId: item.id })}
-    >
-      <View style={styles.cardContent}>
+    <View style={styles.card}>
+      <TouchableOpacity 
+        style={styles.cardContent}
+        onPress={() => navigation.navigate('ItemDetails', { item })}
+      >
         {/* Image/Avatar Section */}
         <View style={styles.avatar}>
           {item.photo ? (
             <Image 
-              source={{ uri: `http://192.168.88.21:8005/api_sqlite.php/images/${item.photo}` }} 
+              source={{ uri: getImageUrl(item.photo) }} 
               style={styles.itemImage}
               onError={() => console.log('Failed to load item image:', item.photo)}
             />
@@ -82,16 +166,28 @@ const CabinetDetails = () => {
           )}
           <Text style={styles.itemMeta}>ID: {item.id}</Text>
         </View>
-        
-        {/* QR Button */}
+      </TouchableOpacity>
+      
+      {/* Action Buttons */}
+      <View style={styles.itemActions}>
         <TouchableOpacity
           onPress={() => generateQRCode('item', item.id, item.name)}
           style={styles.qrButton}
         >
           <Text style={styles.qrButtonText}>QR</Text>
         </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => {
+            console.log('🗑️ Item delete button pressed:', item.id, item.name);
+            handleDeleteItem(item.id, item.name);
+          }}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   if (loading) {
@@ -121,7 +217,7 @@ const CabinetDetails = () => {
           </View>
         }
       />
-
+      
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={[styles.actionButton, styles.addButton]}
@@ -137,14 +233,15 @@ const CabinetDetails = () => {
           <Text style={styles.buttonText}>📷 Scan Items</Text>
         </TouchableOpacity>
 
-        {cabinet && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.qrActionButton]}
-            onPress={() => generateQRCode('cabinet', cabinet.id, cabinet.name)}
-          >
-            <Text style={styles.buttonText}>📱 Cabinet QR</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[styles.actionButton, styles.deleteCabinetButton]}
+          onPress={() => {
+            console.log('🗑️ Cabinet delete button pressed');
+            handleDeleteCabinet();
+          }}
+        >
+          <Text style={styles.buttonText}>🗑️ Delete Cabinet</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -231,7 +328,7 @@ const styles = StyleSheet.create({
   },
   addButton: { backgroundColor: '#007AFF' },
   scanButton: { backgroundColor: '#34C759' },
-  qrActionButton: { backgroundColor: '#FF9500' },
+  deleteCabinetButton: { backgroundColor: '#FF3B30' },
   buttonText: { 
     color: 'white', 
     fontWeight: 'bold', 
@@ -247,6 +344,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     padding: 50 
+  },
+  itemActions: {
+    flexDirection: 'row',
+    gap: 5,
+    alignItems: 'center'
+  },
+  deleteButton: {
+    padding: 6,
+    borderRadius: 4,
+    backgroundColor: '#FF3B30'
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold'
   }
 });
 

@@ -43,3 +43,6 @@ yarn-error.*
 package-lock.json
 
 *.db
+*.jpg
+*.png
+*.jpeg

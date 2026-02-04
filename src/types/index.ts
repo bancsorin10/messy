@@ -27,5 +27,5 @@ export type NavigationParamList = {
   BulkAddItems: { cabinetId: number };
   QRCodeDisplay: { type: 'cabinet' | 'item'; id: number; name: string };
   QRScanner: undefined;
-  ItemDetails: { itemId: number };
+  ItemDetails: { itemId?: number; item?: Item };
 };

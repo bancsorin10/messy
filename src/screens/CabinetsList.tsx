@@ -7,17 +7,16 @@ import {
   StyleSheet, 
   ActivityIndicator,
   RefreshControl,
-  Image
+  Image,
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, NavigationParamList } from '../types';
-import { apiService, parseAPIResponse } from '../services/api';
+import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
 import ImageModal from '../components/ImageModal';
 
-// Debug API URL
-const API_BASE = 'http://localhost:8005/api_sqlite.php';
-console.log('🔗 API_BASE in CabinetList:', API_BASE);
+
 
 type NavigationProp = StackNavigationProp<NavigationParamList, 'CabinetsList'>;
 
@@ -44,22 +43,42 @@ const CabinetsList = () => {
       
       if (!Array.isArray(parsedData)) {
         console.error('❌ Parsed data is not an array!');
+        setCabinets([]);
         return;
       }
       
-      const parsedCabinets: Cabinet[] = parsedData.map((item: any, index: number) => {
+      const processedData = parsedData.map((item: any, index: number) => {
         console.log(`🏗 Processing cabinet ${index}:`, item);
         
-        const cabinet = {
-          id: item[0],
-          name: item[1] || `Cabinet ${item[0]}`,
-          description: item[2],
-          photo: item[3]
-        };
+        // Handle both array format and object format
+        let cabinet: Cabinet | null = null;
+        if (Array.isArray(item)) {
+          // Array format: [id, name, description, photo]
+          cabinet = {
+            id: item[0],
+            name: item[1] || `Cabinet ${item[0]}`,
+            description: item[2],
+            photo: item[3]
+          };
+        } else if (item && typeof item === 'object') {
+          // Object format: {id, name, description, photo}
+          cabinet = {
+            id: item.id,
+            name: item.name || `Cabinet ${item.id}`,
+            description: item.description,
+            photo: item.photo
+          };
+        } else {
+          console.warn(`⚠️ Invalid cabinet data at index ${index}:`, item);
+        }
         
         console.log(`✅ Cabinet ${index}:`, cabinet);
         return cabinet;
       });
+      
+      const parsedCabinets: Cabinet[] = processedData.filter((cabinet): cabinet is Cabinet => 
+        cabinet !== null && cabinet.id != null
+      );
       
       console.log('🎯 Final cabinets array:', parsedCabinets);
       console.log('🎯 Cabinets count:', parsedCabinets.length);
@@ -69,6 +88,7 @@ const CabinetsList = () => {
       console.error('❌ Failed to load cabinets:', error);
       console.error('❌ Error details:', error?.message);
       console.error('❌ Error stack:', error?.stack);
+      setCabinets([]); // Set empty array on error to prevent undefined issues
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -84,21 +104,60 @@ const CabinetsList = () => {
     loadCabinets();
   };
 
+  const handleDeleteCabinet = (cabinetId: number, cabinetName: string) => {
+    console.log('🗑️ Delete button pressed for cabinet:', cabinetId, cabinetName);
+    
+    Alert.alert(
+      'Delete Cabinet',
+      `Are you sure you want to delete "${cabinetName}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: () => executeDeleteCabinet(cabinetId)
+        }
+      ]
+    );
+  };
+
+  const executeDeleteCabinet = async (cabinetId: number) => {
+    try {
+      console.log('🗑️ Executing delete for cabinet:', cabinetId);
+      const response = await apiService.deleteCabinet(cabinetId);
+      console.log('✅ Cabinet deleted successfully:', response);
+      Alert.alert('Success', 'Cabinet deleted successfully');
+      loadCabinets(); // Refresh list
+    } catch (error: any) {
+      console.error('❌ Failed to delete cabinet:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
+      Alert.alert('Error', `Failed to delete cabinet: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
   const renderCabinet = ({ item }: { item: Cabinet }) => (
-    <TouchableOpacity 
-      style={styles.card}
-      onPress={() => navigation.navigate('CabinetDetails', { cabinetId: item.id })}
-    >
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => {
+            console.log('🔗 Navigating to cabinet details:', item.id);
+            navigation.navigate('CabinetDetails', { cabinetId: item.id });
+          }}
+        >
       <View style={styles.cardContent}>
         {/* Image/Avatar Section */}
         <TouchableOpacity style={styles.avatar} onPress={() => {
           if (item.photo) {
-            setSelectedImage(`http://192.168.88.21:8005/api_sqlite.php/images/${item.photo}`);
+            setSelectedImage(getImageUrl(item.photo));
           }
         }}>
           {item.photo ? (
             <Image 
-              source={{ uri: `http://192.168.88.21:8005/api_sqlite.php/images/${item.photo}` }} 
+              source={{ uri: getImageUrl(item.photo) }} 
               style={styles.cabinetImage}
               onError={() => console.log('Failed to load image:', item.photo)}
             />
@@ -118,8 +177,16 @@ const CabinetsList = () => {
           <Text style={styles.itemCount}>ID: {item.id}</Text>
         </View>
         
-        {/* Navigation */}
-        <Text style={styles.chevron}>›</Text>
+        {/* Delete Button */}
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => {
+            console.log('🗑️ Cabinet delete button pressed:', item.id, item.name);
+            handleDeleteCabinet(item.id, item.name);
+          }}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -138,11 +205,17 @@ const CabinetsList = () => {
       <FlatList
         data={cabinets}
         renderItem={renderCabinet}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => (item?.id || index).toString()}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No cabinets found</Text>
+            <Text style={styles.emptySubtext}>Tap the + button to add your first cabinet</Text>
+          </View>
+        }
       />
       <TouchableOpacity
         style={styles.fab}
@@ -264,6 +337,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9500',
     bottom: 140,
     right: 20
+  },
+  deleteButton: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: '#FF3B30',
+    marginLeft: 10
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold'
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 50,
+    minHeight: 200
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 10
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center'
   }
 });
 

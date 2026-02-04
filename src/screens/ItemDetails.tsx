@@ -4,7 +4,6 @@ import {
   Text, 
   ScrollView, 
   StyleSheet, 
-  ActivityIndicator,
   Image,
   TouchableOpacity,
   Alert,
@@ -13,63 +12,27 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList, Item } from '../types';
-import { apiService, parseAPIResponse } from '../services/api';
+import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
 
 type NavigationProp = StackNavigationProp<NavigationParamList, 'ItemDetails'>;
 
 const ItemDetails = () => {
-  const [item, setItem] = useState<Item | null>(null);
-  const [loading, setLoading] = useState(true);
   const [imageFullscreen, setImageFullscreen] = useState(false);
   
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-  const { itemId } = route.params as { itemId: number };
-
-  const loadItemDetails = async () => {
-    try {
-      const response = await apiService.getItems();
-      const items = parseAPIResponse(response);
-      
-      const foundItem = (items as any[]).find((itemData: any) => itemData[0] === itemId);
-      
-      if (foundItem) {
-        const itemDetails: Item = {
-          id: foundItem[0],
-          name: foundItem[1] || `Item ${foundItem[0]}`,
-          description: foundItem[2],
-          photo: foundItem[3],
-          cabinet_id: foundItem[4]
-        };
-        
-        setItem(itemDetails);
-        
-        // Update the screen title
-        navigation.setOptions({ title: itemDetails.name });
-      } else {
-        Alert.alert('Not Found', `Item with ID ${itemId} not found`);
-        navigation.goBack();
-      }
-    } catch (error) {
-      console.error('Failed to load item details:', error);
-      Alert.alert('Error', 'Failed to load item details');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { item, itemId } = route.params as { item?: Item; itemId?: number };
 
   useEffect(() => {
-    loadItemDetails();
-  }, [itemId]);
-
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
-        <Text>Loading item details...</Text>
-      </View>
-    );
-  }
+    if (item) {
+      // Use passed item data
+      navigation.setOptions({ title: item.name });
+    } else if (itemId) {
+      // Fallback for backward compatibility
+      console.log('⚠️ No item data passed, loading from API for itemId:', itemId);
+      Alert.alert('Error', 'Item data not available. Please navigate from cabinet details.');
+    }
+  }, [item, itemId, navigation]);
 
   if (!item) {
     return (
@@ -89,7 +52,7 @@ const ItemDetails = () => {
             style={styles.photoTouchable}
           >
             <Image
-              source={{ uri: `http://192.168.88.21:8005/api_sqlite.php/images/${item.photo}` }}
+              source={{ uri: getImageUrl(item.photo) }}
               style={styles.itemPhoto}
               onError={() => console.log('Failed to load item image:', item.photo)}
               resizeMode="cover"
@@ -154,7 +117,7 @@ const ItemDetails = () => {
             activeOpacity={1}
           >
             <Image
-              source={{ uri: `http://192.168.88.21:8005/api_sqlite.php/images/${item.photo}` }}
+              source={{ uri: getImageUrl(item.photo) }}
               style={styles.fullscreenImage}
               resizeMode="contain"
             />

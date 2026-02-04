@@ -14,6 +14,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, Item, NavigationParamList } from '../types';
 import { apiService, parseAPIResponse } from '../services/api';
+import { testNetworkConnectivity, getNetworkInfo, fetchWithRetry } from '../utils/network';
 import * as ImagePicker from 'expo-image-picker';
 
 type NavigationProp = StackNavigationProp<NavigationParamList, 'AddItem'>;
@@ -70,6 +71,24 @@ const AddItem = () => {
       return;
     }
 
+    // Test network connectivity first
+    console.log('🌐 Testing network connectivity...');
+    const networkTest = await testNetworkConnectivity();
+    console.log('📡 Network test result:', networkTest);
+    
+    if (!networkTest.connected) {
+      console.error('❌ Network connectivity failed:', networkTest.details);
+      Alert.alert(
+        'Network Error', 
+        `Cannot connect to server. Please check your internet connection and try again.\n\nDetails: ${networkTest.details.message || 'Unknown network error'}`,
+        [{ text: 'OK', onPress: () => {} }]
+      );
+      setLoading(false);
+      return;
+    }
+
+    console.log('📱 Platform info:', getNetworkInfo());
+
     setLoading(true);
     try {
       const itemData = {
@@ -79,12 +98,34 @@ const AddItem = () => {
         cabinet_id: cabinetId
       };
       
-      await apiService.addItem(itemData);
+      console.log('📤 Creating item with data:', itemData);
+      const response = await apiService.addItem(itemData);
+      console.log('✅ Item creation response:', response);
       Alert.alert('Success', 'Item created successfully!');
       navigation.goBack();
-    } catch (error) {
-      console.error('Failed to create item:', error);
-      Alert.alert('Error', 'Failed to create item');
+    } catch (error: any) {
+      console.error('❌ Failed to create item:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        stack: error?.stack
+      });
+      
+      // Provide actionable error message based on error type
+      let errorMessage = 'Failed to create item';
+      if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error')) {
+        errorMessage = 'Network connection failed. Please check your internet connection and try again.';
+      } else if (error?.response?.status === 404) {
+        errorMessage = 'Server endpoint not found. Please check server configuration.';
+      } else if (error?.response?.status >= 500) {
+        errorMessage = 'Server error occurred. Please try again later.';
+      } else if (error?.message) {
+        errorMessage = `Failed to create item: ${error.message}`;
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }

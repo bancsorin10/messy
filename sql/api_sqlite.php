@@ -6,7 +6,8 @@ $messy_db = new SQLite3('messy.db');
 
 // Enable CORS for web development
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+// header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, DELETE');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 $method = $_SERVER['REQUEST_METHOD'];
 ini_set('display_errors', 1);
@@ -21,8 +22,13 @@ case 'POST':
     break;
 case 'DELETE':
     handle_delete($_SERVER['PATH_INFO'], $messy_db);
+    break;
+case 'OPTIONS':
+    // doing a passthrough for this one for some preflight shit?
+    http_response_code(200);
+    break;
 default:
-    // http_response_code(404);
+    http_response_code(404);
 }
 
 function get_all_rows($result) {
@@ -35,27 +41,29 @@ function get_all_rows($result) {
 }
 
 function handle_delete($path, $messy_db) {
-    error_log(print_r($_DELETE, true));
-    http_response_code(200);
-    return true;
-    switch ($path):
+    // error_log(print_r($_DELETE, true));
+    // error_log(print_r($_GET, true));
+    // http_response_code(200);
+    // return true;
+    switch ($path) {
     case '/delete_item':
         $stmt = $messy_db->prepare('delete from items where id=:id');
-        $stmt->bindValue(':id', $_DELETE['id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
         $stmt->execute();
         http_response_code(200);
         break;
     case '/delete_cabinet':
         $stmt = $messy_db->prepare('delete from items where cabinet_id=:id');
-        $stmt->bindValue(':id', $_DELETE['id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
         $stmt->execute();
         $stmt = $messy_db->prepare('delete from cabinets where id=:id');
-        $stmt->bindValue(':id', $_DELETE['id'], SQLITE3_INTEGER);
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
         $stmt->execute();
         http_response_code(200);
         break;
     default:
         http_response_code(404);
+    }
 }
 
 function save_photo() {
@@ -72,15 +80,16 @@ function save_photo() {
 }
 
 function handle_post($path, $messy_db) {
-    // $input = json_decode(file_get_contents('php://input'), true);
+    // error_log("input");
     // error_log(json_encode($input));
-    error_log(print_r($_POST, true));
+    // error_log("end input");
+    // error_log(print_r($_POST, true));
     if (isset($_FILES['photo']['name'])) {
         $photo = $_FILES['photo']['name'];
     } else {
         $photo = null;
     }
-    // error_log(print_r($_POST, true));
+    error_log(print_r($_POST, true));
     // error_log($path);
     switch ($path) {
     case '/add_cabinet':
@@ -106,8 +115,22 @@ function handle_post($path, $messy_db) {
         $stmt->bindParam(':description', $_POST['description'], SQLITE3_TEXT);
         $stmt->bindParam(':photo', $photo, SQLITE3_TEXT);
         $stmt->bindValue(':id', $_POST['cabinet_id'], SQLITE3_INTEGER);
-        error_log("executing " . $stmt->getSQL(true));
+        // error_log("executing " . $stmt->getSQL(true));
         $stmt->execute();
+        break;
+    case '/move_items':
+        $input = json_decode(file_get_contents('php://input'), true);
+        foreach ($input['ids'] as $id) {
+            $stmt = $messy_db->prepare(
+                'update items
+                set cabinet_id=:cabinet_id
+                where id=:id');
+            $stmt->bindValue(':cabinet_id', $input['cabinet_id']);
+            $stmt->bindValue(':id', $id);
+            error_log("executing " . $stmt->getSQL(true));
+            $stmt->execute();
+        }
+        http_response_code(200);
         break;
     default:
         http_response_code(404);
@@ -122,6 +145,7 @@ function general_listing($path, $messy_db) {
         $result = $messy_db->query('select * from cabinets');
         $data = get_all_rows($result);
         // echo json_encode($result->fetchArray(SQLITE3_NUM));
+        // error_log(json_encode($data));
         echo json_encode($data);
         break;
     case '/items':
@@ -154,7 +178,7 @@ function general_listing($path, $messy_db) {
             $stmt = $messy_db->prepare('select * from items');
         }
         $result = $stmt->execute();
-        $data = fetch_all_rows($result);
+        $data = get_all_rows($result);
         echo json_encode($data);
         break;
     case str_starts_with($path, '/images'):
