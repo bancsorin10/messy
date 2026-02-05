@@ -10,7 +10,7 @@ import {
   Image,
   Alert
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, NavigationParamList } from '../types';
 import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
@@ -98,6 +98,13 @@ const CabinetsList = () => {
   useEffect(() => {
     loadCabinets();
   }, []);
+
+  // Refresh cabinets when screen comes into focus (e.g., after adding cabinet)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadCabinets();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

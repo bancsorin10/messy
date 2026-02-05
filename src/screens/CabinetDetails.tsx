@@ -9,7 +9,7 @@ import {
   Alert,
   Image
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, Item, NavigationParamList } from '../types';
 import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
@@ -87,6 +87,15 @@ const CabinetDetails = () => {
       });
     }
   }, [cabinet, itemCount]);
+
+  // Refresh items when screen comes into focus (e.g., after adding item)
+  useFocusEffect(
+    React.useCallback(() => {
+      if (cabinetId) {
+        loadItems();
+      }
+    }, [cabinetId])
+  );
 
   const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
     navigation.navigate('QRCodeDisplay', { type, id, name });

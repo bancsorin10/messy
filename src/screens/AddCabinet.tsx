@@ -79,9 +79,6 @@ const AddCabinet = () => {
       
       await apiService.addCabinet(cabinetData);
       Alert.alert('Success', 'Cabinet created successfully!');
-      
-      // Trigger automatic refresh after adding cabinet
-      await apiService.getCabinets();
       navigation.goBack();
     } catch (error) {
       console.error('Failed to create cabinet:', error);
