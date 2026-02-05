@@ -144,8 +144,8 @@ const CabinetsList = () => {
         <TouchableOpacity
           style={styles.card}
           onPress={() => {
-            console.log('🔗 Navigating to cabinet details:', item.id);
-            navigation.navigate('CabinetDetails', { cabinetId: item.id });
+            console.log('🔗 Navigating to cabinet details:', item.id, item.name);
+            navigation.navigate('CabinetDetails', { cabinetId: item.id, cabinetName: item.name });
           }}
         >
       <View style={styles.cardContent}>

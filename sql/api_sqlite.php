@@ -45,6 +45,7 @@ function handle_delete($path, $messy_db) {
     // error_log(print_r($_GET, true));
     // http_response_code(200);
     // return true;
+    // TODO: delete photo if existing
     switch ($path) {
     case '/delete_item':
         $stmt = $messy_db->prepare('delete from items where id=:id');
@@ -67,16 +68,26 @@ function handle_delete($path, $messy_db) {
 }
 
 function save_photo() {
+    error_log(print_r($_FILES, true));
+    error_log($_FILES['error']);
+    $types = array(
+        'image/png' => 'png',
+        'image/jpeg' => 'jpeg',
+        'image/jpg' => 'jpg');
     if (isset($_FILES['photo']['name'])) {
         $upload_dir  = './images/';
-        $file_name = $_FILES['photo']['name'];
-        $target_path = $upload_dir . $file_name;
+        // $file_name = $_FILES['photo']['name'];
         $type = mime_content_type($_FILES['photo']['tmp_name']);
         if (!str_starts_with($type, "image/")) {
             http_response_code(403);
         }
+        $file_name = uniqid('',true) . $types[$type];
+        $target_path = $upload_dir . $file_name;
         $result = move_uploaded_file($_FILES['photo']['tmp_name'], $target_path);
+        return $file_name;
     }
+
+    return null;
 }
 
 function handle_post($path, $messy_db) {
@@ -84,16 +95,16 @@ function handle_post($path, $messy_db) {
     // error_log(json_encode($input));
     // error_log("end input");
     // error_log(print_r($_POST, true));
-    if (isset($_FILES['photo']['name'])) {
-        $photo = $_FILES['photo']['name'];
-    } else {
-        $photo = null;
-    }
+    // if (isset($_FILES['photo']['name'])) {
+    //     $photo = $_FILES['photo']['name'];
+    // } else {
+    //     $photo = null;
+    // }
     error_log(print_r($_POST, true));
     // error_log($path);
     switch ($path) {
     case '/add_cabinet':
-        save_photo();
+        $photo = save_photo();
         // error_log('adding cabinet');
         $stmt = $messy_db->prepare(
             'insert into cabinets
@@ -106,7 +117,7 @@ function handle_post($path, $messy_db) {
         $stmt->execute();
         break;
     case '/add_item':
-        save_photo();
+        $photo = save_photo();
         $stmt = $messy_db->prepare(
             'insert into items
             (name, description, photo, cabinet_id) values

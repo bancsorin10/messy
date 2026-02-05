@@ -19,17 +19,30 @@ type NavigationProp = StackNavigationProp<NavigationParamList, 'CabinetDetails'>
 const CabinetDetails = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageFullscreen, setImageFullscreen] = useState(false);
   const [cabinet, setCabinet] = useState<Cabinet | null>(null);
+  const [itemCount, setItemCount] = useState<number>(0);
   
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-  const { cabinetId } = route.params as { cabinetId: number };
+  const params = route.params as { cabinetId: number; cabinetName?: string } || {};
+  const cabinetId = params?.cabinetId;
+  const cabinetName = params?.cabinetName;
+  
+  
 
-const loadItems = async () => {
+  const loadItems = async () => {
+    if (!cabinetId) {
+      console.error('❌ Cannot load items: cabinetId is undefined');
+      setLoading(false);
+      return;
+    }
+    
     try {
       const response = await apiService.getItems(cabinetId);
       const parsedItems: Item[] = parseAPIResponse(response);
       setItems(parsedItems);
+      setItemCount(parsedItems.length); // Set item count for header
     } catch (error) {
       console.error('Failed to load items:', error);
     } finally {
@@ -37,7 +50,45 @@ const loadItems = async () => {
     }
   };
 
-const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
+  useEffect(() => {
+    if (!cabinetId) {
+      console.error('❌ No cabinetId provided to CabinetDetails');
+      return;
+    }
+    loadItems();
+    setCabinet({ id: cabinetId, name: cabinetName || `Cabinet ${cabinetId}` });
+  }, [cabinetId, cabinetName]);
+
+  // Load cabinet name separately
+  useEffect(() => {
+    const loadCabinetName = async () => {
+      try {
+        const response = await apiService.getCabinets();
+        const cabinets = parseAPIResponse(response);
+        const cabinet = cabinets.find((c: any) => c.id === cabinetId);
+        if (cabinet && typeof cabinet === 'object' && 'name' in cabinet && typeof cabinet.name === 'string' && cabinet.name) {
+          setCabinet({ id: cabinetId, name: cabinet.name });
+        }
+      } catch (error) {
+        console.error('Failed to load cabinet name:', error);
+      }
+    };
+    
+    if (cabinetId && !cabinetName) {
+      loadCabinetName();
+    }
+  }, [cabinetId, cabinetName]);
+
+  // Set header title after cabinet data is loaded
+  useEffect(() => {
+    if (cabinet) {
+      navigation.setOptions({ 
+        title: `${cabinet.name} (${itemCount} items)` 
+      });
+    }
+  }, [cabinet, itemCount]);
+
+  const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
     navigation.navigate('QRCodeDisplay', { type, id, name });
   };
 
@@ -77,49 +128,11 @@ const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
     }
   };
 
-  const executeDeleteCabinet = async () => {
-    try {
-      console.log('🗑️ Executing delete for cabinet:', cabinetId);
-      const response = await apiService.deleteCabinet(cabinetId);
-      console.log('🗑️ Delete response:', response);
-      if (typeof window !== 'undefined') {
-        alert('Cabinet and all its items deleted successfully');
-      } else {
-        Alert.alert('Success', 'Cabinet and all its items deleted successfully');
-      }
-      navigation.goBack();
-    } catch (error) {
-      console.error('❌ Failed to delete cabinet:', error);
-      if (typeof window !== 'undefined') {
-        alert('Failed to delete cabinet');
-      } else {
-        Alert.alert('Error', 'Failed to delete cabinet');
-      }
-    }
-  };
-
   const handleDeleteCabinet = () => {
-    // Get item count to show warning if needed
-    const itemCount = items.length;
-    
-    console.log('🗑️ Delete cabinet button pressed:', { cabinetId, itemCount });
-    
-    if (typeof window !== 'undefined') {
-      // Web - use native confirm
-      const message = itemCount > 0 
-        ? `This cabinet contains ${itemCount} item(s). Deleting this cabinet will also delete all items inside. Are you sure you want to continue?`
-        : `Are you sure you want to delete this cabinet? This action cannot be undone.`;
-      
-      if (confirm(message)) {
-        executeDeleteCabinet();
-      }
-    } else {
-      // React Native - use Alert
+    if (itemCount === 0) {
       Alert.alert(
         'Delete Cabinet',
-        itemCount > 0 
-          ? `This cabinet contains ${itemCount} item(s). Deleting this cabinet will also delete all items inside. Are you sure you want to continue?`
-          : `Are you sure you want to delete this cabinet? This action cannot be undone.`,
+        `Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -129,13 +142,33 @@ const generateQRCode = (type: 'cabinet' | 'item', id: number, name: string) => {
           }
         ]
       );
+    } else {
+      Alert.alert(
+        'Cannot Delete',
+        `This cabinet contains ${itemCount} item(s). Please delete all items first.`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
-  useEffect(() => {
-    loadItems();
-    setCabinet({ id: cabinetId, name: `Cabinet ${cabinetId}` });
-  }, [cabinetId]);
+  const executeDeleteCabinet = async () => {
+    try {
+      console.log('🗑️ Executing delete for cabinet:', cabinetId);
+      const response = await apiService.deleteCabinet(cabinetId);
+      console.log('✅ Cabinet deleted successfully:', response);
+      Alert.alert('Success', 'Cabinet deleted successfully');
+      navigation.goBack();
+    } catch (error: any) {
+      console.error('❌ Failed to delete cabinet:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
+      Alert.alert('Error', `Failed to delete cabinet: ${error?.message || 'Unknown error'}`);
+    }
+  };
 
   const renderItem = ({ item }: { item: Item }) => (
     <View style={styles.card}>

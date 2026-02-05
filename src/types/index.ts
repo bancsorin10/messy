@@ -5,6 +5,14 @@ export interface Cabinet {
   photo?: string;
 }
 
+export interface CabinetWithCount {
+  id: number;
+  name: string;  
+  description?: string;
+  photo?: string;
+  itemCount: number;
+}
+
 export interface Item {
   id: number;
   name: string;
@@ -21,7 +29,7 @@ export interface APIResponse<T> {
 
 export type NavigationParamList = {
   CabinetsList: undefined;
-  CabinetDetails: { cabinetId: number };
+  CabinetDetails: { cabinetId: number; cabinetName?: string };
   AddCabinet: undefined;
   AddItem: { cabinetId?: number };
   BulkAddItems: { cabinetId: number };

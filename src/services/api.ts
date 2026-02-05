@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { Cabinet, Item } from '../types';
+import { Cabinet, Item, CabinetWithCount } from '../types';
+import { isWeb, isNative, isReactNative } from '../utils/platform';
 
 const API_BASE = 'http://192.168.88.21:8005/api_sqlite.php';
 
@@ -29,7 +30,16 @@ axiosInstance.interceptors.response.use(
       console.error('🔍 Server responded with error:', error.response.status, error.response.data);
     }
     
-    return Promise.reject(error);
+    // Don't create unhandled promise rejections - let the calling code handle the error
+    console.error('🔍 API error details:', {
+      message: error?.message,
+      code: error?.code,
+      response: error?.response?.data,
+      status: error?.response?.status
+    });
+    
+    // Return the error without Promise.reject to avoid unhandled rejection
+    return error;
   }
 );
 
@@ -38,6 +48,41 @@ export const apiService = {
   getCabinets: () => {
     console.log('🔍 Fetching cabinets');
     return axiosInstance.get(`${API_BASE}/cabinets`);
+  },
+
+  // Get cabinets with item counts for header display
+  getCabinetsWithCounts: async () => {
+    try {
+      console.log('🔍 Fetching cabinets with item counts...');
+      const cabinetsResponse = await apiService.getCabinets();
+      const cabinets = parseAPIResponse(cabinetsResponse);
+      
+      // Get item count for each cabinet
+      const cabinetsWithCounts = await Promise.all(
+        cabinets.map(async (cabinet) => {
+          try {
+            const itemsResponse = await apiService.getItems(cabinet.id);
+            const items = parseAPIResponse(itemsResponse);
+            return {
+              ...cabinet,
+              itemCount: items.length
+            };
+          } catch (error) {
+            console.error(`Failed to get items for cabinet ${cabinet.id}:`, error);
+            return {
+              ...cabinet,
+              itemCount: 0
+            };
+          }
+        })
+      );
+      
+      console.log('🎯 Cabinets with counts:', cabinetsWithCounts);
+      return cabinetsWithCounts;
+    } catch (error) {
+      console.error('Failed to fetch cabinets with counts:', error);
+      throw error;
+    }
   },
   
   getItems: (cabinetId?: number) => {
@@ -62,20 +107,30 @@ export const apiService = {
       
       // Add photo if exists
       if (data.photo) {
-        // Handle image for web/React Native
-        if (typeof window !== 'undefined') {
-          // Web - convert blob to file
-          const response = await fetch(data.photo);
-          const blob = await response.blob();
-          const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-          formData.append('photo', file);
-        } else {
+        console.log('🔍 Platform detection:', {
+          isNative: isNative(),
+          isReactNative: isReactNative(),
+          isWeb: isWeb(),
+          hasWindow: typeof window !== 'undefined',
+          hasNavigator: typeof navigator !== 'undefined',
+          navigatorProduct: typeof navigator !== 'undefined' ? navigator.product : 'undefined'
+        });
+        
+        if (isNative() || isReactNative()) {
           // React Native - use uri directly
+          console.log('📱 Using React Native photo handling');
           formData.append('photo', {
             uri: data.photo,
             type: 'image/jpeg',
             name: 'photo.jpg'
           } as any);
+        } else {
+          // Web - convert blob to file
+          console.log('🌐 Using Web photo handling');
+          const response = await fetch(data.photo);
+          const blob = await response.blob();
+          const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+          formData.append('photo', file);
         }
       }
       
@@ -106,20 +161,30 @@ export const apiService = {
       
       // Add photo if exists
       if (data.photo) {
-        // Handle image for web/React Native
-        if (typeof window !== 'undefined') {
-          // Web - convert blob to file
-          const response = await fetch(data.photo);
-          const blob = await response.blob();
-          const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
-          formData.append('photo', file);
-        } else {
+        console.log('🔍 Platform detection:', {
+          isNative: isNative(),
+          isReactNative: isReactNative(),
+          isWeb: isWeb(),
+          hasWindow: typeof window !== 'undefined',
+          hasNavigator: typeof navigator !== 'undefined',
+          navigatorProduct: typeof navigator !== 'undefined' ? navigator.product : 'undefined'
+        });
+        
+        if (isNative() || isReactNative()) {
           // React Native - use uri directly
+          console.log('📱 Using React Native photo handling');
           formData.append('photo', {
             uri: data.photo,
             type: 'image/jpeg',
             name: 'photo.jpg'
           } as any);
+        } else {
+          // Web - convert blob to file
+          console.log('🌐 Using Web photo handling');
+          const response = await fetch(data.photo);
+          const blob = await response.blob();
+          const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+          formData.append('photo', file);
         }
       }
       
