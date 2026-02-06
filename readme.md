@@ -16,19 +16,19 @@ stuff.
 # some photos of the app on android
 
 - list of cabinets
-![list of cabinets](demo_pics/demo_cabinets_list.jpeg)
+<img alt="list of cabinets" src="demo_pics/demo_cabinets_list.jpeg" width="200" height="500">
 
 - list of items in a cabinet
-![list of items](demo_pics/demo_cabinet_listing.jpeg)
+<img alt="list of items" src="demo_pics/demo_cabinet_listing.jpeg" width="200" height="500">
 
 - item landing page
-![item landing](demo_pics/demo_item.jpeg)
+<img alt="item landing" src="demo_pics/demo_item.jpeg" width="200" height="500">
 
 - item qr
-![item qr](demo_pics/demo_item_qr.jpeg)
+<img alt="item qr" src="demo_pics/demo_item_qr.jpeg" width="200" height="500">
 
 - search
-![search](demo_pics/demo_search.jpeg)
+<img alt="search" src="demo_pics/demo_search.jpeg" width="200" height="500">
 
 # create the database
 
