@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, NavigationParamList } from '../types';
 import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
 import ImageModal from '../components/ImageModal';
+import SearchComponent from '../components/SearchComponent';
 
 
 
@@ -25,6 +26,7 @@ const CabinetsList = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [searchVisible, setSearchVisible] = useState(false);
   const navigation = useNavigation<NavigationProp>();
 
   const loadCabinets = async () => {
@@ -231,21 +233,35 @@ const CabinetsList = () => {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
       
-      {/* QR Scan Button */}
-      <TouchableOpacity
-        style={[styles.fab, styles.qrButton]}
-        onPress={() => navigation.navigate('QRScanner')}
-      >
-        <Text style={styles.fabText}>📷</Text>
-      </TouchableOpacity>
-      
-      {/* Debug Test Button */}
-      <TouchableOpacity
-        style={[styles.fab, styles.debugButton]}
-        onPress={loadCabinets}
-      >
-        <Text style={styles.fabText}>🔄</Text>
-      </TouchableOpacity>
+       {/* Search Button */}
+       <TouchableOpacity
+         style={[styles.fab, styles.searchButton]}
+         onPress={() => setSearchVisible(true)}
+       >
+         <Text style={styles.fabText}>🔍</Text>
+       </TouchableOpacity>
+       
+       {/* QR Scan Button */}
+       <TouchableOpacity
+         style={[styles.fab, styles.qrButton]}
+         onPress={() => navigation.navigate('QRScanner')}
+       >
+         <Text style={styles.fabText}>📷</Text>
+       </TouchableOpacity>
+       
+       {/* Debug Test Button */}
+       <TouchableOpacity
+         style={[styles.fab, styles.debugButton]}
+         onPress={loadCabinets}
+       >
+         <Text style={styles.fabText}>🔄</Text>
+       </TouchableOpacity>
+       
+       {/* Search Modal */}
+       <SearchComponent
+         visible={searchVisible}
+         onClose={() => setSearchVisible(false)}
+       />
       
       {/* Fullscreen Image Modal */}
       <ImageModal
@@ -338,6 +354,11 @@ const styles = StyleSheet.create({
   qrButton: {
     backgroundColor: '#34C759',
     bottom: 80,
+    right: 20
+  },
+  searchButton: {
+    backgroundColor: '#5856D6',
+    bottom: 200,
     right: 20
   },
   debugButton: {

@@ -272,6 +272,13 @@ export const apiService = {
         'Content-Type': 'application/json'
       }
     });
+  },
+
+  // Search items by name
+  searchItems: async (query: string) => {
+    console.log('🔍 Searching items with query:', query);
+    
+    return axiosInstance.get(`${API_BASE}/search_item?name=${encodeURIComponent(query)}`);
   }
 };
 
