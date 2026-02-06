@@ -192,6 +192,27 @@ function general_listing($path, $messy_db) {
         $data = get_all_rows($result);
         echo json_encode($data);
         break;
+    case '/get_item':
+        header('Content-Type: application/json');
+        $stmt = $messy_db->prepare('select * from items where id=:id');
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
+        // error_log("executing " . $stmt->getSQL(true));
+        $result = $stmt->execute();
+        // there should only be one result
+        $data = $result->fetchArray(SQLITE3_NUM);
+        error_log(json_encode($data));
+        echo json_encode($data);
+        break;
+    case '/search_item':
+        header('Content-Type: application/json');
+        $stmt = $messy_db->prepare('
+            select * from items
+            where name like %:name%');
+        $stmt->bindParam(':name', $_GET['name']);
+        $result = $stmt->execute();
+        $data = get-all_rows($result);
+        echo json_encode($data);
+        break;
     case str_starts_with($path, '/images'):
         header('Content-Type: image/png');
         $image = '.' . $path;
