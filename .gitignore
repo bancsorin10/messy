@@ -47,3 +47,4 @@ package-lock.json
 *.png
 *.jpeg
 *.mp4
+!demo_pics/*
