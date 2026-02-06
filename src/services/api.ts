@@ -214,6 +214,52 @@ export const apiService = {
     return axiosInstance.delete(`${API_BASE}/delete_item?id=${itemId}`);
   },
 
+  // Get single item details
+  getItem: async (itemId: number) => {
+    console.log('📦 Fetching item details:', itemId);
+    
+    const response = await axiosInstance.get(`${API_BASE}/get_item?id=${itemId}`);
+    console.log('📦 Raw item response:', response.data);
+    
+    // Parse single item from response
+    // For get_item, the API returns a flat array [id, name, description, photo, cabinet_id]
+    // not a nested array like other endpoints
+    let data = response.data;
+    let item;
+    
+    if (Array.isArray(data)) {
+      if (data.length === 0) {
+        throw new Error('Item not found');
+      }
+      
+      // Check if it's a simple array [id, name, description, photo, cabinet_id]
+      if (typeof data[0] === 'number') {
+        item = {
+          id: data[0],
+          name: data[1] || `Item ${data[0]}`,
+          description: data[2],
+          photo: data[3],
+          cabinet_id: data[4]
+        };
+      } else {
+        // Array of objects - take first one
+        item = data[0];
+      }
+    } else if (data && typeof data === 'object') {
+      // Single object
+      item = data;
+    } else {
+      throw new Error('Invalid item data format');
+    }
+    
+    console.log('🔧 Final parsed item object:', item);
+    
+    return {
+      ...response,
+      data: item
+    };
+  },
+
   // Bulk move items request
   moveItems: async (cabinetId: number, itemIds: number[]) => {
     console.log('📦 Moving items to cabinet:', cabinetId, itemIds);

@@ -32,35 +32,36 @@ fi
 
 echo "📱 Android device connected: $(adb devices | grep 'device' | cut -f1 -d' ')"
 
-# Build APK with camera permissions
-echo "🏗 Building APK with camera permissions..."
-npx expo build:android --no-dev --type apk
+# Check if user is logged into Expo
+if ! npx eas whoami > /dev/null 2>&1; then
+    echo "❌ Not logged into Expo account. Please run: npx eas login"
+    exit 1
+fi
+
+echo "✅ Expo login verified"
+
+# Build APK with camera permissions using EAS
+echo "🏗 Building APK with camera permissions using EAS..."
+npx eas build --platform android --profile production --non-interactive
 
 if [ $? -eq 0 ]; then
-    echo "✅ APK built successfully!"
-    echo "📦 APK location: dist/"
-    
-    # Try to install directly
-    echo "🚀 Installing on connected device..."
-    
-    for apk in dist/*.apk; do
-        if [ -f "$apk" ]; then
-            echo "📱 Installing: $(basename $apk)"
-            adb install -r "$apk"
-            if [ $? -eq 0 ]; then
-                echo "✅ Installed: $(basename $apk)"
-                echo ""
-                echo "🎯 App deployed successfully!"
-                echo "🔍 Camera permissions and QR scanning are now enabled"
-                echo "🔍 Test QR scanning with real camera"
-                echo "🔍 Look for 'Cabinet Organization' app in your app drawer"
-            else
-                echo "❌ Failed to install: $(basename $apk)"
-            fi
-        fi
-    done
+    echo "✅ APK build completed successfully!"
+    echo ""
+    echo "📦 Your APK is being built on Expo's servers"
+    echo "📧 You'll receive an email when the build is ready"
+    echo "🔗 Download link will be available in your Expo dashboard"
+    echo "🌐 Expo dashboard: https://expo.dev/accounts/[username]/projects/messy/builds"
+    echo ""
+    echo "📱 To install when ready:"
+    echo "   1. Download APK from Expo dashboard"
+    echo "   2. Install: adb install <path-to-apk>"
+    echo "   3. Or transfer to phone and install manually"
+    echo ""
+    echo "🎯 Camera permissions and QR scanning are included"
+    echo "🔍 Look for 'messy' app in your app drawer"
 else
-    echo "❌ APK build failed!"
+    echo "❌ Build failed!"
     echo "🔍 Check error messages above for troubleshooting"
+    echo "🔍 Make sure you have proper Expo account setup"
     exit 1
 fi

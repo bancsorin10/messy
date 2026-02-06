@@ -244,8 +244,16 @@ const CabinetDetails = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.cabinetTitle}>{cabinet?.name}</Text>
-        <Text style={styles.itemCount}>{items.length} items</Text>
+        <View style={styles.headerContent}>
+          <Text style={styles.cabinetTitle}>{cabinet?.name}</Text>
+          <Text style={styles.itemCount}>{items.length} items</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => cabinet && generateQRCode('cabinet', cabinet.id, cabinet.name)}
+          style={styles.cabinetQrButton}
+        >
+          <Text style={styles.cabinetQrButtonText}>QR</Text>
+        </TouchableOpacity>
       </View>
       
       <FlatList
@@ -291,9 +299,31 @@ const CabinetDetails = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
-  header: { padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },
+  header: { 
+    padding: 20, 
+    backgroundColor: 'white', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  headerContent: { flex: 1 },
   cabinetTitle: { fontSize: 24, fontWeight: 'bold' },
   itemCount: { fontSize: 16, color: '#666', marginTop: 4 },
+  cabinetQrButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  cabinetQrButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold'
+  },
   list: { padding: 10 },
   card: { 
     backgroundColor: 'white', 

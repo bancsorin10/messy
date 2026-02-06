@@ -11,7 +11,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { NavigationParamList } from '../types';
-import { apiService } from '../services/api';
+import { apiService, parseAPIResponse } from '../services/api';
 
 type NavigationProp = StackNavigationProp<NavigationParamList, 'QRScanner'>;
 
@@ -56,22 +56,39 @@ const QRScanner = () => {
       }
 
       if (parsed.type === 'cabinet') {
-        // Verify cabinet exists before navigating
+        // Get cabinet items and navigate to cabinet details
         try {
-          const response = await apiService.getCabinets();
-          const cabinets = response.data;
-          const cabinetExists = cabinets.some((cabinet: any) => cabinet[0] === parsed.id);
+          console.log('🏗 Getting items for cabinet:', parsed.id);
+          const response = await apiService.getItems(parsed.id);
+          console.log('✅ Cabinet items retrieved successfully');
           
-          if (cabinetExists) {
-            navigation.navigate('CabinetDetails', { cabinetId: parsed.id });
-          } else {
-            Alert.alert('Cabinet Not Found', `Cabinet with ID ${parsed.id} does not exist.`);
-          }
+          // Navigate to cabinet details with items loaded via focus effect
+          navigation.navigate('CabinetDetails', { cabinetId: parsed.id });
         } catch (error) {
-          Alert.alert('Error', 'Failed to verify cabinet. Please try again.');
+          console.error('❌ Failed to load cabinet:', error);
+          Alert.alert('Cabinet Not Found', `Cabinet with ID ${parsed.id} does not exist or failed to load.`);
         }
       } else if (parsed.type === 'item') {
-        navigation.navigate('ItemDetails', { itemId: parsed.id });
+        // Get item details and navigate to item details
+        try {
+          console.log('📦 Getting item details:', parsed.id);
+          const response = await apiService.getItem(parsed.id);
+          console.log('✅ Item details retrieved successfully');
+          
+          // Use the parsed item data directly from the improved getItem response
+          const itemData = response.data as any;
+          console.log('📦 Navigating to ItemDetails with:', {
+            itemId: parsed.id,
+            itemData: itemData,
+            itemType: typeof itemData,
+            hasName: itemData?.name,
+            hasId: itemData?.id
+          });
+          navigation.navigate('ItemDetails', { itemId: parsed.id, item: itemData });
+        } catch (error) {
+          console.error('❌ Failed to load item:', error);
+          Alert.alert('Item Not Found', `Item with ID ${parsed.id} does not exist or failed to load.`);
+        }
       }
     } catch (error) {
       console.error('Error processing QR code:', error);

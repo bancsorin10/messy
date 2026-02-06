@@ -18,6 +18,8 @@ type NavigationProp = StackNavigationProp<NavigationParamList, 'ItemDetails'>;
 
 const ItemDetails = () => {
   const [imageFullscreen, setImageFullscreen] = useState(false);
+  const [itemData, setItemData] = useState<Item | null>(null);
+  const [loading, setLoading] = useState(false);
   
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
@@ -25,16 +27,45 @@ const ItemDetails = () => {
 
   useEffect(() => {
     if (item) {
-      // Use passed item data
-      navigation.setOptions({ title: item.name });
+      // Use passed item data (from QR scanner or navigation)
+      setItemData(item);
+      console.log('✅ Item data set from params:', item);
     } else if (itemId) {
-      // Fallback for backward compatibility
-      console.log('⚠️ No item data passed, loading from API for itemId:', itemId);
+      // Fallback - this shouldn't happen with QR scanner
+      console.log('⚠️ Only itemId provided, no item data:', itemId);
       Alert.alert('Error', 'Item data not available. Please navigate from cabinet details.');
+    } else {
+      console.log('❌ No item data or itemId provided');
+      Alert.alert('Error', 'Item not found');
     }
-  }, [item, itemId, navigation]);
+  }, [item, itemId]);
 
-  if (!item) {
+  const currentItem = itemData;
+
+  // Update navigation title when item data changes
+  useEffect(() => {
+    if (currentItem && currentItem.name) {
+      navigation.setOptions({ title: currentItem.name });
+    }
+  }, [currentItem, navigation]);
+
+  // Add debug logging
+  console.log('🔍 ItemDetails render:', {
+    itemFromParams: item,
+    itemData: itemData,
+    currentItem: currentItem,
+    loading: loading
+  });
+
+  if (!currentItem) {
+    return (
+      <View style={styles.centered}>
+        <Text>Loading item...</Text>
+      </View>
+    );
+  }
+  
+  if (!currentItem || (currentItem && !currentItem.name)) {
     return (
       <View style={styles.centered}>
         <Text>Item not found</Text>
@@ -45,16 +76,16 @@ const ItemDetails = () => {
   return (
     <ScrollView style={styles.container}>
       {/* Item Photo */}
-      {item.photo && (
+      {currentItem.photo && (
         <View style={styles.photoContainer}>
           <TouchableOpacity 
             onPress={() => setImageFullscreen(true)}
             style={styles.photoTouchable}
           >
             <Image
-              source={{ uri: getImageUrl(item.photo) }}
+              source={{ uri: getImageUrl(currentItem.photo) }}
               style={styles.itemPhoto}
-              onError={() => console.log('Failed to load item image:', item.photo)}
+              onError={() => console.log('Failed to load item image:', currentItem.photo)}
               resizeMode="cover"
             />
           </TouchableOpacity>
@@ -64,27 +95,27 @@ const ItemDetails = () => {
       {/* Item Information */}
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.name}>{item.name}</Text>
-          <Text style={styles.id}>ID: {item.id}</Text>
+          <Text style={styles.name}>{currentItem.name}</Text>
+          <Text style={styles.id}>ID: {currentItem.id}</Text>
         </View>
 
-        {item.description && (
+        {currentItem.description && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{item.description}</Text>
+            <Text style={styles.description}>{currentItem.description}</Text>
           </View>
         )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Location</Text>
-          <Text style={styles.cabinetInfo}>Cabinet ID: {item.cabinet_id}</Text>
+          <Text style={styles.cabinetInfo}>Cabinet ID: {currentItem.cabinet_id}</Text>
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('CabinetDetails', { cabinetId: item.cabinet_id })}
+            onPress={() => navigation.navigate('CabinetDetails', { cabinetId: currentItem.cabinet_id })}
           >
             <Text style={styles.actionButtonText}>View Cabinet</Text>
           </TouchableOpacity>
@@ -93,8 +124,8 @@ const ItemDetails = () => {
             style={[styles.actionButton, styles.qrButton]}
             onPress={() => navigation.navigate('QRCodeDisplay', { 
               type: 'item', 
-              id: item.id, 
-              name: item.name 
+              id: currentItem.id, 
+              name: currentItem.name 
             })}
           >
             <Text style={styles.actionButtonText}>Show QR Code</Text>
@@ -103,7 +134,7 @@ const ItemDetails = () => {
       </View>
 
       {/* Fullscreen Image Modal */}
-      {imageFullscreen && item.photo && (
+      {imageFullscreen && currentItem.photo && (
         <View style={styles.fullscreenOverlay}>
           <TouchableOpacity
             style={styles.fullscreenClose}
@@ -117,7 +148,7 @@ const ItemDetails = () => {
             activeOpacity={1}
           >
             <Image
-              source={{ uri: getImageUrl(item.photo) }}
+              source={{ uri: getImageUrl(currentItem.photo) }}
               style={styles.fullscreenImage}
               resizeMode="contain"
             />
