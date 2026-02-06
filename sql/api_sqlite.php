@@ -71,9 +71,9 @@ function save_photo() {
     error_log(print_r($_FILES, true));
     error_log($_FILES['error']);
     $types = array(
-        'image/png' => 'png',
-        'image/jpeg' => 'jpeg',
-        'image/jpg' => 'jpg');
+        'image/png' => '.png',
+        'image/jpeg' => '.jpeg',
+        'image/jpg' => '.jpg');
     if (isset($_FILES['photo']['name'])) {
         $upload_dir  = './images/';
         // $file_name = $_FILES['photo']['name'];
@@ -205,12 +205,13 @@ function general_listing($path, $messy_db) {
         break;
     case '/search_item':
         header('Content-Type: application/json');
+        $searchPattern = '%' . $_GET['name'] . '%';
         $stmt = $messy_db->prepare('
             select * from items
-            where name like %:name%');
-        $stmt->bindParam(':name', $_GET['name']);
+            where name like :name');
+        $stmt->bindParam(':name', $searchPattern);
         $result = $stmt->execute();
-        $data = get-all_rows($result);
+        $data = get_all_rows($result);
         echo json_encode($data);
         break;
     case str_starts_with($path, '/images'):
