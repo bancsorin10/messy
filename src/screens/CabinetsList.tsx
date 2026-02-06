@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
-  Alert
+  Alert,
+  Platform
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -116,18 +117,31 @@ const CabinetsList = () => {
   const handleDeleteCabinet = (cabinetId: number, cabinetName: string) => {
     console.log('🗑️ Delete button pressed for cabinet:', cabinetId, cabinetName);
     
-    Alert.alert(
-      'Delete Cabinet',
-      `Are you sure you want to delete "${cabinetName}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => executeDeleteCabinet(cabinetId)
-        }
-      ]
-    );
+    const confirmDelete = () => {
+      console.log('🗑️ User confirmed delete for cabinet:', cabinetId);
+      executeDeleteCabinet(cabinetId);
+    };
+    
+    if (Platform.OS === 'web') {
+      // Use browser's native confirm on web
+      if (window.confirm(`Are you sure you want to delete "${cabinetName}"? This action cannot be undone.`)) {
+        confirmDelete();
+      }
+    } else {
+      // Use React Native Alert on mobile
+      Alert.alert(
+        'Delete Cabinet',
+        `Are you sure you want to delete "${cabinetName}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: confirmDelete
+          }
+        ]
+      );
+    }
   };
 
   const executeDeleteCabinet = async (cabinetId: number) => {
@@ -135,8 +149,12 @@ const CabinetsList = () => {
       console.log('🗑️ Executing delete for cabinet:', cabinetId);
       const response = await apiService.deleteCabinet(cabinetId);
       console.log('✅ Cabinet deleted successfully:', response);
+      
+      // Immediately update state for web compatibility
+      setCabinets(prev => prev.filter(cabinet => cabinet.id !== cabinetId));
+      
       Alert.alert('Success', 'Cabinet deleted successfully');
-      loadCabinets(); // Refresh list
+      loadCabinets(); // Refresh list as backup
     } catch (error: any) {
       console.error('❌ Failed to delete cabinet:', error);
       console.error('❌ Error details:', {

@@ -7,7 +7,8 @@ import {
   StyleSheet, 
   ActivityIndicator,
   Alert,
-  Image
+  Image,
+  Platform
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -104,18 +105,31 @@ const CabinetDetails = () => {
   const handleDeleteItem = (itemId: number, itemName: string) => {
     console.log('🗑️ Delete button pressed for item:', itemId, itemName);
     
-    Alert.alert(
-      'Delete Item',
-      `Are you sure you want to delete "${itemName}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: () => executeDeleteItem(itemId)
-        }
-      ]
-    );
+    const confirmDelete = () => {
+      console.log('🗑️ User confirmed delete for item:', itemId);
+      executeDeleteItem(itemId);
+    };
+    
+    if (Platform.OS === 'web') {
+      // Use browser's native confirm on web
+      if (window.confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
+        confirmDelete();
+      }
+    } else {
+      // Use React Native Alert on mobile
+      Alert.alert(
+        'Delete Item',
+        `Are you sure you want to delete "${itemName}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: confirmDelete
+          }
+        ]
+      );
+    }
   };
 
   const executeDeleteItem = async (itemId: number) => {
@@ -123,8 +137,13 @@ const CabinetDetails = () => {
       console.log('🗑️ Executing delete for item:', itemId);
       const response = await apiService.deleteItem(itemId);
       console.log('✅ Item deleted successfully:', response);
+      
+      // Immediately update state for web compatibility
+      setItems(prev => prev.filter(item => item.id !== itemId));
+      setItemCount(prev => Math.max(0, prev - 1));
+      
       Alert.alert('Success', 'Item deleted successfully');
-      loadItems(); // Refresh list
+      loadItems(); // Refresh list as backup
     } catch (error: any) {
       console.error('❌ Failed to delete item:', error);
       console.error('❌ Error details:', {
@@ -139,24 +158,48 @@ const CabinetDetails = () => {
 
   const handleDeleteCabinet = () => {
     if (itemCount === 0) {
-      Alert.alert(
-        'Delete Cabinet',
-        `Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Delete', 
-            style: 'destructive',
-            onPress: () => executeDeleteCabinet()
-          }
-        ]
-      );
+      const confirmDelete = () => {
+        console.log('🗑️ User confirmed delete for cabinet:', cabinetId);
+        executeDeleteCabinet();
+      };
+      
+      if (Platform.OS === 'web') {
+        // Use browser's native confirm on web
+        if (window.confirm(`Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`)) {
+          confirmDelete();
+        }
+      } else {
+        // Use React Native Alert on mobile
+        Alert.alert(
+          'Delete Cabinet',
+          `Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { 
+              text: 'Delete', 
+              style: 'destructive',
+              onPress: confirmDelete
+            }
+          ]
+        );
+      }
     } else {
-      Alert.alert(
-        'Cannot Delete',
-        `This cabinet contains ${itemCount} item(s). Please delete all items first.`,
-        [{ text: 'OK' }]
-      );
+      const showMessage = () => {
+        console.log('🚫 Cannot delete cabinet with items');
+      };
+      
+      if (Platform.OS === 'web') {
+        // Use browser's native alert on web
+        window.alert(`This cabinet contains ${itemCount} item(s). Please delete all items first.`);
+        showMessage();
+      } else {
+        // Use React Native Alert on mobile
+        Alert.alert(
+          'Cannot Delete',
+          `This cabinet contains ${itemCount} item(s). Please delete all items first.`,
+          [{ text: 'OK', onPress: showMessage }]
+        );
+      }
     }
   };
 
