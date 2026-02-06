@@ -8,8 +8,27 @@ You can scan a QR to view the details of the scanned item/cabinet.
 
 You can bulk move items from one cabinet to another.
 
+You can search for items.
+
 The app was built with opencode (for everything react) and manually for the php
 stuff.
+
+# some photos of the app on android
+
+- list of cabinets
+![list of cabinets](demo_pics/demo_cabinets_list.jpeg)
+
+- list of items in a cabinet
+![list of items](demo_pics/demo_cabinet_listing.jpeg)
+
+- item landing page
+![item landing](demo_pics/demo_item.jpeg)
+
+- item qr
+![item qr](demo_pics/demo_item_qr.jpeg)
+
+- search
+![search](demo_pics/demo_search.jpeg)
 
 # create the database
 
@@ -63,3 +82,11 @@ yarn start --android
 After the app is loaded you can just `yarn start --web` and it should update
 the app when you start it via expo (given you are on the same network, you no
 longer need the cable)
+
+# Incoming features
+
+- printing should be done via a thermal cat printer by the php api server, or
+  directly to an esp32 that would manage the printer.
+- searching filters, search by description instead of name (maybe add a count
+  to each item if you want to keep track of what you have in order to restock
+  when out)
