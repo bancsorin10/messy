@@ -279,6 +279,19 @@ export const apiService = {
     console.log('🔍 Searching items with query:', query);
     
     return axiosInstance.get(`${API_BASE}/search_item?name=${encodeURIComponent(query)}`);
+  },
+
+  // Print QR code - sends PNG base64 to /print endpoint
+  printQRCode: async (base64Image: string) => {
+    console.log('🖨️ Printing QR code');
+    
+    return axiosInstance.post(`${API_BASE}/print`, {
+      image: base64Image
+    }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 };
 

@@ -1,6 +1,8 @@
-// Platform detection utilities
-export const isWeb = () => typeof window !== 'undefined';
-export const isNative = () => typeof window === 'undefined';
+import { Platform } from 'react-native';
+
+const rnPlatform = Platform.OS;
+export const isWeb = () => rnPlatform === 'web';
+export const isNative = () => rnPlatform === 'ios' || rnPlatform === 'android';
 export const isReactNative = () => typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 
 // Platform-specific confirm dialog

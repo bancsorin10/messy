@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,41 +8,74 @@ import {
   Share,
   ActivityIndicator
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import QRCode from 'react-native-qrcode-svg';
+import { useRoute } from '@react-navigation/native';
+import Svg, { Rect, Path } from 'react-native-svg';
 import { NavigationParamList } from '../types';
 import { apiService } from '../services/api';
+import { isWeb } from '../utils/platform';
+import QRCodeLib from 'qrcode';
 
-type NavigationProp = StackNavigationProp<NavigationParamList, 'QRCodeDisplay'>;
+const RenderSvgPaths = ({ svgString }: { svgString: string }) => {
+  const paths = svgString.match(/<path[^>]*>/g) || [];
+  
+  return (
+    <>
+      {paths.map((path, i) => {
+        const dMatch = path.match(/d="([^"]+)"/);
+        const fillMatch = path.match(/fill="([^"]+)"/);
+        const strokeMatch = path.match(/stroke="([^"]+)"/);
+        if (!dMatch) return null;
+        
+        const color = fillMatch ? fillMatch[1] : (strokeMatch ? strokeMatch[1] : 'black');
+        return <React.Fragment key={i}><Path d={dMatch[1]} fill={color} stroke={strokeMatch ? color : undefined} /></React.Fragment>;
+      })}
+    </>
+  );
+};
 
 const QRCodeDisplay = () => {
   const [isPrinting, setIsPrinting] = useState(false);
-  const qrRef = useRef<QRCode>(null);
+  const [svgString, setSvgString] = useState<string>('');
+  const [viewBox, setViewBox] = useState<string>('0 0 21 21');
   
   const route = useRoute();
-  const navigation = useNavigation<NavigationProp>();
   const { type, id, name } = route.params as NavigationParamList['QRCodeDisplay'];
   
   const qrValue = `${type}:${id}`;
   const displayTitle = `${name} (${type === 'cabinet' ? 'Cabinet' : 'Item'})`;
 
-  const convertToBase64 = (): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      if (qrRef.current) {
-        // For react-native-qrcode-svg, we'll need a different approach
-        // For now, return a placeholder base64 string
-        resolve('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==');
-      } else {
-        reject(new Error('QR Code reference not available'));
+  useEffect(() => {
+    const generateQR = async () => {
+      try {
+        const svg = await QRCodeLib.toString(qrValue, { type: 'svg', width: 200 });
+        console.log('Generated SVG, length:', svg?.length);
+        
+        const vbMatch = svg.match(/viewBox="([^"]+)"/);
+        if (vbMatch) {
+          setViewBox(vbMatch[1]);
+        }
+        
+        setSvgString(svg);
+      } catch (err) {
+        console.error('QR generation failed:', err);
       }
-    });
+    };
+    generateQR();
+  }, [qrValue]);
+
+  const captureQRCode = async (): Promise<string> => {
+    if (!svgString) {
+      console.log('SVG string is empty:', svgString);
+      throw new Error('QR code not generated yet');
+    }
+    console.log('Sending SVG, length:', svgString.length);
+    return btoa(svgString);
   };
 
   const handlePrint = async () => {
     try {
       setIsPrinting(true);
-      const base64Image = await convertToBase64();
+      const base64Image = await captureQRCode();
       await apiService.printQRCode(base64Image);
       Alert.alert('Success', 'QR code sent to printer successfully');
     } catch (error) {
@@ -55,12 +88,10 @@ const QRCodeDisplay = () => {
 
   const handleShare = async () => {
     try {
-      const base64Image = await convertToBase64();
+      const base64Image = await captureQRCode();
       
-      // Create a data URL for QR code
-      const dataUrl = `data:image/png;base64,${base64Image}`;
+      const dataUrl = `data:image/svg+xml;base64,${base64Image}`;
       
-      // Use React Native Share API
       await Share.share({
         title: `QR Code for ${name}`,
         url: dataUrl,
@@ -80,15 +111,22 @@ const QRCodeDisplay = () => {
       </View>
 
       <View style={styles.qrContainer}>
-        <View style={styles.qrWrapper}>
-          <QRCode
-            value={qrValue}
-            size={200}
-            color="black"
-            backgroundColor="white"
-            getRef={(ref) => (qrRef.current = ref)}
-          />
-        </View>
+        {svgString ? (
+          <View style={styles.qrWrapper}>
+            {isWeb() ? (
+              <div dangerouslySetInnerHTML={{ __html: svgString }} />
+            ) : (
+              <View style={{ width: 200, height: 200, backgroundColor: 'white' }}>
+                <Svg width="100%" height="100%" viewBox={viewBox}>
+                  <Rect x="0" y="0" width="100%" height="100%" fill="white" />
+                  <RenderSvgPaths svgString={svgString} />
+                </Svg>
+              </View>
+            )}
+          </View>
+        ) : (
+          <ActivityIndicator size="large" />
+        )}
       </View>
 
       <View style={styles.buttonContainer}>
@@ -100,11 +138,10 @@ const QRCodeDisplay = () => {
           {isPrinting ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
-            <Text style={styles.buttonText}>🖨️ Print QR</Text>
+            <Text style={styles.buttonText}>
+              {isPrinting ? 'Printing...' : 'Print QR'}
+            </Text>
           )}
-          <Text style={styles.buttonText}>
-            {isPrinting ? 'Printing...' : 'Print QR'}
-          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
