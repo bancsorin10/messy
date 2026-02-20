@@ -40,6 +40,83 @@ function get_all_rows($result) {
     return $data;
 }
 
+function handle_print($image) {
+    $target_size = 128;
+    $width = $target_size;
+    $height = $target_size;
+
+    $imagick = new Imagick();
+    $imagick->setResolution(300, 300);
+    error_log($image);
+    $imagick->readImageBlob(base64_decode($image));
+
+    // resize without smoothing
+    $imagick->resizeImage($width, $height, Imagick::FILTER_POINT, 1);
+
+    $imagick->setBackgroundColor('white');
+    $img = $imagick->mergeImageLayers(imagick::LAYERMETHOD_FLATTEN);
+
+    $img->setImageColorspace(Imagick::COLORSPACE_GRAY);
+
+    // $img->tresholdImage(0.5 * Imagick::getQuantum());
+    $img->quantizeImage(
+        2,
+        Imagick::COLORSPACE_GRAY,
+        0,
+        false,
+        false
+    );
+
+    $bytes = ceil($width / 8);
+    echo "const unsigned char qr_bitmap[] PROGMEM = {\n";
+
+    $bitmap_str = '';
+
+    for ($y = 0; $y < $height; $y++) {
+        for ($xByte = 0; $xByte < $bytes; $xByte++) {
+
+            $byte = 0;
+
+            for ($bit = 0; $bit < 8; $bit++) {
+                $x = $xByte * 8 + $bit;
+                if ($x >= $width) continue;
+
+                $pixel = $img->getImagePixelColor($x, $y);
+                $color = $pixel->getColor();
+
+                // Black pixel = bit set
+                if ($color['r'] < 128) {
+                    $byte |= (1 << (7 - $bit));  // MSB first
+                }
+            }
+            $bitmap_str .= chr($byte);
+            // echo sprintf("0x%02X, ", $byte);
+        }
+        // echo "\n";
+    }
+
+    // echo "};\n";
+    // echo "const unsigned int qr_width = $width;\n";
+    // echo "const unsigned int qr_height = $height;\n";
+    $img->clear();
+    $img->destroy();
+
+
+    $encoded_bitmap = base64_encode($bitmap_str);
+    echo $encoded_bitmap;
+
+    $post_data = json_encode(['qr' => $encoded_bitmap]);
+
+    // do curl request
+    $ch = curl_init("http://192.168.88.22/print");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $post_data);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
 function handle_delete($path, $messy_db) {
     // error_log(print_r($_DELETE, true));
     // error_log(print_r($_GET, true));
@@ -141,6 +218,13 @@ function handle_post($path, $messy_db) {
             error_log("executing " . $stmt->getSQL(true));
             $stmt->execute();
         }
+        http_response_code(200);
+        break;
+    case '/print':
+        $input = json_decode(file_get_contents('php://input'), true);
+        error_log(json_encode($input));
+        // error_log(print_r($_FILES, true));
+        handle_print($input["image"]);
         http_response_code(200);
         break;
     default:
