@@ -157,67 +157,38 @@ const CabinetDetails = () => {
   };
 
   const handleDeleteCabinet = () => {
-    if (itemCount === 0) {
-      const confirmDelete = () => {
-        console.log('🗑️ User confirmed delete for cabinet:', cabinetId);
-        executeDeleteCabinet();
-      };
-      
-      if (Platform.OS === 'web') {
-        // Use browser's native confirm on web
-        if (window.confirm(`Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`)) {
-          confirmDelete();
-        }
-      } else {
-        // Use React Native Alert on mobile
-        Alert.alert(
-          'Delete Cabinet',
-          `Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { 
-              text: 'Delete', 
-              style: 'destructive',
-              onPress: confirmDelete
-            }
-          ]
-        );
+    const confirmDelete = () => {
+      console.log('🗑️ User confirmed delete for cabinet:', cabinetId);
+      executeDeleteCabinet();
+    };
+    
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`)) {
+        confirmDelete();
       }
     } else {
-      const showMessage = () => {
-        console.log('🚫 Cannot delete cabinet with items');
-      };
-      
-      if (Platform.OS === 'web') {
-        // Use browser's native alert on web
-        window.alert(`This cabinet contains ${itemCount} item(s). Please delete all items first.`);
-        showMessage();
-      } else {
-        // Use React Native Alert on mobile
-        Alert.alert(
-          'Cannot Delete',
-          `This cabinet contains ${itemCount} item(s). Please delete all items first.`,
-          [{ text: 'OK', onPress: showMessage }]
-        );
-      }
+      Alert.alert(
+        'Delete Cabinet',
+        `Are you sure you want to delete "${cabinet?.name}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: confirmDelete
+          }
+        ]
+      );
     }
   };
 
   const executeDeleteCabinet = async () => {
     try {
-      console.log('🗑️ Executing delete for cabinet:', cabinetId);
       const response = await apiService.deleteCabinet(cabinetId);
-      console.log('✅ Cabinet deleted successfully:', response);
       Alert.alert('Success', 'Cabinet deleted successfully');
       navigation.goBack();
     } catch (error: any) {
       console.error('❌ Failed to delete cabinet:', error);
-      console.error('❌ Error details:', {
-        message: error?.message,
-        code: error?.code,
-        response: error?.response?.data,
-        status: error?.response?.status
-      });
       Alert.alert('Error', `Failed to delete cabinet: ${error?.message || 'Unknown error'}`);
     }
   };
@@ -256,7 +227,10 @@ const CabinetDetails = () => {
       {/* Action Buttons */}
       <View style={styles.itemActions}>
         <TouchableOpacity
-          onPress={() => generateQRCode('item', item.id, item.name)}
+          onPress={(e) => {
+            e.stopPropagation();
+            generateQRCode('item', item.id, item.name);
+          }}
           style={styles.qrButton}
         >
           <Text style={styles.qrButtonText}>QR</Text>
@@ -264,7 +238,8 @@ const CabinetDetails = () => {
         
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => {
+          onPress={(e) => {
+            e.stopPropagation();
             console.log('🗑️ Item delete button pressed:', item.id, item.name);
             handleDeleteItem(item.id, item.name);
           }}

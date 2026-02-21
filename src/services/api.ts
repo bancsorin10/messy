@@ -199,8 +199,6 @@ export const apiService = {
 
   // DELETE requests
   deleteCabinet: async (cabinetId: number) => {
-    console.log('🗑️ Deleting cabinet:', cabinetId);
-    
     return axiosInstance.delete(`${getApiBase()}/delete_cabinet?id=${cabinetId}`);
   },
 

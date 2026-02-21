@@ -59,7 +59,13 @@ insert into cabinets (name, description, photo) values ('dulap1', 'dummy dulap',
 insert into items (name, description, photo, cabinet_id) values ('item1', 'dummy item', 'turtle.png', 1);
 ```
 
-# run the app
+# getting the apk
+
+if you don't want to build the apk, there should be one available by going
+to the actions and getting the latest build with artifact. once you install
+that you only need to start the php server
+
+# build and run the app
 
 - start the php server
 ```
@@ -84,9 +90,3 @@ the app when you start it via expo (given you are on the same network, you no
 longer need the cable)
 
 # Incoming features
-
-- printing should be done via a thermal cat printer by the php api server, or
-  directly to an esp32 that would manage the printer.
-- searching filters, search by description instead of name (maybe add a count
-  to each item if you want to keep track of what you have in order to restock
-  when out)

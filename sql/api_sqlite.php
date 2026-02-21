@@ -47,7 +47,7 @@ function handle_print($image) {
 
     $imagick = new Imagick();
     $imagick->setResolution(300, 300);
-    error_log($image);
+    // error_log($image);
     $imagick->readImageBlob(base64_decode($image));
 
     // resize without smoothing
@@ -125,15 +125,47 @@ function handle_delete($path, $messy_db) {
     // TODO: delete photo if existing
     switch ($path) {
     case '/delete_item':
+        $stmt = $messy_db->prepare('select photo from items where id=:id');
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $res = $result->fetchArray(SQLITE3_NUM);
+        error_log(print_r($res, true));
+        if (isset($res[0])) {
+            exec('rm images/' . $res[0]);
+        }
         $stmt = $messy_db->prepare('delete from items where id=:id');
         $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
         $stmt->execute();
         http_response_code(200);
         break;
     case '/delete_cabinet':
+        // delete item photos and items
+        $stmt = $messy_db->prepare(
+            'select photo from items where cabinet_id=:id');
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
+        // error_log($stmt->getSql(true));
+        $result = $stmt->execute();
+        // error_log(print_r($result, true));
+        $data = get_all_rows($result);
+        // error_log(print_r($data, true));
+        foreach ($data as $img) {
+            if (isset($img[0])) {
+                exec('rm images/' . $img[0]);
+            }
+        }
         $stmt = $messy_db->prepare('delete from items where cabinet_id=:id');
         $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
         $stmt->execute();
+
+        // delete cabinet photo and cabinet
+        $stmt = $messy_db->prepare('select photo from cabinets where id=:id');
+        $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
+        $result = $stmt->execute();
+        $res = $result->fetchArray(SQLITE3_NUM);
+        // error_log(print_r($res, true));
+        if (isset($res[0])) {
+            exec('rm images/' . $res[0]);
+        }
         $stmt = $messy_db->prepare('delete from cabinets where id=:id');
         $stmt->bindValue(':id', $_GET['id'], SQLITE3_INTEGER);
         $stmt->execute();

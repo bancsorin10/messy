@@ -195,7 +195,8 @@ const CabinetsList = () => {
         >
       <View style={styles.cardContent}>
         {/* Image/Avatar Section */}
-        <TouchableOpacity style={styles.avatar} onPress={() => {
+        <TouchableOpacity style={styles.avatar} onPress={(e) => {
+          e.stopPropagation();
           if (item.photo) {
             setSelectedImage(getImageUrl(item.photo));
           }
@@ -225,7 +226,8 @@ const CabinetsList = () => {
         {/* Delete Button */}
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => {
+          onPress={(e) => {
+            e.stopPropagation();
             console.log('🗑️ Cabinet delete button pressed:', item.id, item.name);
             handleDeleteCabinet(item.id, item.name);
           }}
