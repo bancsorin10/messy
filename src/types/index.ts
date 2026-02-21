@@ -21,6 +21,12 @@ export interface Item {
   cabinet_id: number;
 }
 
+export interface PhotoAsset {
+  uri: string;
+  type?: string | null;
+  fileName?: string | null;
+}
+
 export interface APIResponse<T> {
   data: T[];
   success: boolean;

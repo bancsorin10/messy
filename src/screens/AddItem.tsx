@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Cabinet, Item, NavigationParamList } from '../types';
+import { Cabinet, Item, NavigationParamList, PhotoAsset } from '../types';
 import { apiService, parseAPIResponse } from '../services/api';
 import { testNetworkConnectivity, getNetworkInfo, fetchWithRetry } from '../utils/network';
 import * as ImagePicker from 'expo-image-picker';
@@ -22,7 +22,7 @@ type NavigationProp = StackNavigationProp<NavigationParamList, 'AddItem'>;
 const AddItem = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<PhotoAsset | null>(null);
   const [loading, setLoading] = useState(false);
   const [cabinets, setCabinets] = useState<Cabinet[]>([]);
   
@@ -99,6 +99,7 @@ const AddItem = () => {
       };
       
       console.log('📤 Creating item with data:', itemData);
+      console.log('📸 Photo object:', photo);
       const response = await apiService.addItem(itemData);
       console.log('✅ Item creation response:', response);
       Alert.alert('Success', 'Item created successfully!');
@@ -141,7 +142,12 @@ const AddItem = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setPhoto(result.assets[0].uri);
+        const asset = result.assets[0];
+        setPhoto({
+          uri: asset.uri,
+          type: asset.type,
+          fileName: asset.fileName,
+        });
       }
     } catch (error) {
       console.error('Error selecting photo:', error);

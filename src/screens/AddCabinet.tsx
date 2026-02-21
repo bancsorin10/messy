@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { NavigationParamList } from '../types';
+import { NavigationParamList, PhotoAsset } from '../types';
 import { apiService, parseAPIResponse } from '../services/api';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -19,7 +19,7 @@ type NavigationProp = StackNavigationProp<NavigationParamList, 'AddCabinet'>;
 const AddCabinet = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [photo, setPhoto] = useState('');
+  const [photo, setPhoto] = useState<PhotoAsset | null>(null);
   const [loading, setLoading] = useState(false);
   const [cabinets, setCabinets] = useState<any[]>([]);
   
@@ -55,7 +55,12 @@ const AddCabinet = () => {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setPhoto(result.assets[0].uri);
+        const asset = result.assets[0];
+        setPhoto({
+          uri: asset.uri,
+          type: asset.type,
+          fileName: asset.fileName,
+        });
       }
     } catch (error) {
       console.error('Error selecting photo:', error);
@@ -77,6 +82,8 @@ const AddCabinet = () => {
         photo: photo || undefined
       };
       
+      console.log('📸 Cabinet photo object:', photo);
+      console.log('📤 Creating cabinet with data:', cabinetData);
       await apiService.addCabinet(cabinetData);
       Alert.alert('Success', 'Cabinet created successfully!');
       navigation.goBack();

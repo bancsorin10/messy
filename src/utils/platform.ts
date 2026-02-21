@@ -1,8 +1,7 @@
 import { Platform } from 'react-native';
 
-const rnPlatform = Platform.OS;
-export const isWeb = () => rnPlatform === 'web';
-export const isNative = () => rnPlatform === 'ios' || rnPlatform === 'android';
+export const isWeb = () => Platform.OS === 'web';
+export const isNative = () => Platform.OS === 'ios' || Platform.OS === 'android';
 export const isReactNative = () => typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
 
 // Platform-specific confirm dialog

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Cabinet, Item, CabinetWithCount } from '../types';
+import { Cabinet, Item, CabinetWithCount, PhotoAsset } from '../types';
 import { isWeb, isNative, isReactNative } from '../utils/platform';
 
 const API_BASE = 'http://192.168.88.21:8005/api_sqlite.php';
@@ -94,7 +94,7 @@ export const apiService = {
   },
 
   // POST requests - using enhanced axios for mobile compatibility
-  addCabinet: async (data: { name: string; description?: string; photo?: string }) => {
+  addCabinet: async (data: { name: string; description?: string; photo?: string | PhotoAsset }) => {
     try {
       console.log('📸 Adding cabinet:', data);
       
@@ -106,30 +106,26 @@ export const apiService = {
       }
       
       // Add photo if exists
-      if (data.photo) {
-        console.log('🔍 Platform detection:', {
-          isNative: isNative(),
-          isReactNative: isReactNative(),
-          isWeb: isWeb(),
-          hasWindow: typeof window !== 'undefined',
-          hasNavigator: typeof navigator !== 'undefined',
-          navigatorProduct: typeof navigator !== 'undefined' ? navigator.product : 'undefined'
-        });
+      const photoData = data.photo;
+      if (photoData) {
+        const photoUri = typeof photoData === 'string' ? photoData : photoData.uri;
+        const photoType = typeof photoData === 'string' || !photoData.type ? 'image/jpeg' : (photoData.type === 'image' ? 'image/jpeg' : photoData.type);
+        const photoName = typeof photoData === 'string' || !photoData.fileName ? 'photo.jpg' : photoData.fileName;
+        
+        console.log('📸 Photo details:', { uri: photoUri, type: photoType, name: photoName });
         
         if (isNative() || isReactNative()) {
           // React Native - use uri directly
-          console.log('📱 Using React Native photo handling');
           formData.append('photo', {
-            uri: data.photo,
-            type: 'image/jpeg',
-            name: 'photo.jpg'
+            uri: photoUri,
+            type: photoType,
+            name: photoName
           } as any);
         } else {
           // Web - convert blob to file
-          console.log('🌐 Using Web photo handling');
-          const response = await fetch(data.photo);
+          const response = await fetch(photoUri);
           const blob = await response.blob();
-          const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+          const file = new File([blob], photoName, { type: photoType });
           formData.append('photo', file);
         }
       }
@@ -147,7 +143,7 @@ export const apiService = {
     }
   },
     
-  addItem: async (data: { name: string; description?: string; photo?: string; cabinet_id: number }) => {
+  addItem: async (data: { name: string; description?: string; photo?: string | PhotoAsset; cabinet_id: number }) => {
     try {
       console.log('📸 Adding item:', data);
       
@@ -160,30 +156,26 @@ export const apiService = {
       }
       
       // Add photo if exists
-      if (data.photo) {
-        console.log('🔍 Platform detection:', {
-          isNative: isNative(),
-          isReactNative: isReactNative(),
-          isWeb: isWeb(),
-          hasWindow: typeof window !== 'undefined',
-          hasNavigator: typeof navigator !== 'undefined',
-          navigatorProduct: typeof navigator !== 'undefined' ? navigator.product : 'undefined'
-        });
+      const photoData = data.photo;
+      if (photoData) {
+        const photoUri = typeof photoData === 'string' ? photoData : photoData.uri;
+        const photoType = typeof photoData === 'string' || !photoData.type ? 'image/jpeg' : (photoData.type === 'image' ? 'image/jpeg' : photoData.type);
+        const photoName = typeof photoData === 'string' || !photoData.fileName ? 'photo.jpg' : photoData.fileName;
+        
+        console.log('📸 Photo details:', { uri: photoUri, type: photoType, name: photoName });
         
         if (isNative() || isReactNative()) {
           // React Native - use uri directly
-          console.log('📱 Using React Native photo handling');
           formData.append('photo', {
-            uri: data.photo,
-            type: 'image/jpeg',
-            name: 'photo.jpg'
+            uri: photoUri,
+            type: photoType,
+            name: photoName
           } as any);
         } else {
           // Web - convert blob to file
-          console.log('🌐 Using Web photo handling');
-          const response = await fetch(data.photo);
+          const response = await fetch(photoUri);
           const blob = await response.blob();
-          const file = new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+          const file = new File([blob], photoName, { type: photoType });
           formData.append('photo', file);
         }
       }
