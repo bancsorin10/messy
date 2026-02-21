@@ -25,10 +25,16 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.VIBRATE"
-      ]
+      ],
+      "package": "com.bancsorin10.messy"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c08780f8-1610-4f3e-83d3-e6bfbaec51dc"
+      }
     }
   }
 }
