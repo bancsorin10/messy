@@ -2,11 +2,15 @@ import axios from 'axios';
 import { Cabinet, Item, CabinetWithCount, PhotoAsset } from '../types';
 import { isWeb, isNative, isReactNative } from '../utils/platform';
 
-const API_BASE = 'http://192.168.88.21:8005/api_sqlite.php';
+const DEFAULT_API_BASE = 'http://192.168.88.21:8005/api_sqlite.php';
 
-// Export API base for consistent usage across components
-export const getApiUrl = (path: string) => `${API_BASE}${path}`;
-export const getImageUrl = (filename: string) => `${API_BASE}/images/${filename}`;
+let currentApiBase = DEFAULT_API_BASE;
+
+export const getApiBase = () => currentApiBase;
+export const setApiBase = (url: string) => { currentApiBase = url; };
+
+export const getApiUrl = (path: string) => `${getApiBase()}${path}`;
+export const getImageUrl = (filename: string) => `${getApiBase()}/images/${filename}`;
 
 // Enhanced axios configuration for mobile compatibility
 const axiosInstance = axios.create({
@@ -47,7 +51,7 @@ export const apiService = {
   // GET requests
   getCabinets: () => {
     console.log('🔍 Fetching cabinets');
-    return axiosInstance.get(`${API_BASE}/cabinets`);
+    return axiosInstance.get(`${getApiBase()}/cabinets`);
   },
 
   // Get cabinets with item counts for header display
@@ -87,8 +91,8 @@ export const apiService = {
   
   getItems: (cabinetId?: number) => {
     const url = cabinetId 
-      ? `${API_BASE}/items?cabinet_id=${cabinetId}` 
-      : `${API_BASE}/items`;
+      ? `${getApiBase()}/items?cabinet_id=${cabinetId}` 
+      : `${getApiBase()}/items`;
     console.log('🔍 Fetching items:', url);
     return axiosInstance.get(url);
   },
@@ -132,7 +136,7 @@ export const apiService = {
       
       console.log('📸 Sending cabinet FormData to API');
       
-      return axiosInstance.post(`${API_BASE}/add_cabinet`, formData, {
+      return axiosInstance.post(`${getApiBase()}/add_cabinet`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
@@ -182,7 +186,7 @@ export const apiService = {
       
       console.log('📸 Sending item FormData to API');
       
-      return axiosInstance.post(`${API_BASE}/add_item`, formData, {
+      return axiosInstance.post(`${getApiBase()}/add_item`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         }
@@ -197,20 +201,20 @@ export const apiService = {
   deleteCabinet: async (cabinetId: number) => {
     console.log('🗑️ Deleting cabinet:', cabinetId);
     
-    return axiosInstance.delete(`${API_BASE}/delete_cabinet?id=${cabinetId}`);
+    return axiosInstance.delete(`${getApiBase()}/delete_cabinet?id=${cabinetId}`);
   },
 
   deleteItem: async (itemId: number) => {
     console.log('🗑️ Deleting item:', itemId);
     
-    return axiosInstance.delete(`${API_BASE}/delete_item?id=${itemId}`);
+    return axiosInstance.delete(`${getApiBase()}/delete_item?id=${itemId}`);
   },
 
   // Get single item details
   getItem: async (itemId: number) => {
     console.log('📦 Fetching item details:', itemId);
     
-    const response = await axiosInstance.get(`${API_BASE}/get_item?id=${itemId}`);
+    const response = await axiosInstance.get(`${getApiBase()}/get_item?id=${itemId}`);
     console.log('📦 Raw item response:', response.data);
     
     // Parse single item from response
@@ -256,7 +260,7 @@ export const apiService = {
   moveItems: async (cabinetId: number, itemIds: number[]) => {
     console.log('📦 Moving items to cabinet:', cabinetId, itemIds);
     
-    return axiosInstance.post(`${API_BASE}/move_items`, {
+    return axiosInstance.post(`${getApiBase()}/move_items`, {
       cabinet_id: cabinetId,
       ids: itemIds  // PHP expects 'ids' not 'item_ids'
     }, {
@@ -270,14 +274,14 @@ export const apiService = {
   searchItems: async (query: string) => {
     console.log('🔍 Searching items with query:', query);
     
-    return axiosInstance.get(`${API_BASE}/search_item?name=${encodeURIComponent(query)}`);
+    return axiosInstance.get(`${getApiBase()}/search_item?name=${encodeURIComponent(query)}`);
   },
 
   // Print QR code - sends PNG base64 to /print endpoint
   printQRCode: async (base64Image: string) => {
     console.log('🖨️ Printing QR code');
     
-    return axiosInstance.post(`${API_BASE}/print`, {
+    return axiosInstance.post(`${getApiBase()}/print`, {
       image: base64Image
     }, {
       headers: {

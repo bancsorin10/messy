@@ -9,12 +9,15 @@ import {
   RefreshControl,
   Image,
   Alert,
-  Platform
+  Platform,
+  Modal,
+  TextInput,
+  Pressable
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Cabinet, NavigationParamList } from '../types';
-import { apiService, parseAPIResponse, getImageUrl } from '../services/api';
+import { apiService, parseAPIResponse, getImageUrl, getApiBase, setApiBase } from '../services/api';
 import ImageModal from '../components/ImageModal';
 import SearchComponent from '../components/SearchComponent';
 
@@ -28,6 +31,8 @@ const CabinetsList = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [apiModalVisible, setApiModalVisible] = useState(false);
+  const [apiUrlInput, setApiUrlInput] = useState('');
   const navigation = useNavigation<NavigationProp>();
 
   const loadCabinets = async () => {
@@ -112,6 +117,19 @@ const CabinetsList = () => {
   const onRefresh = () => {
     setRefreshing(true);
     loadCabinets();
+  };
+
+  const handleApiUrlConfig = () => {
+    setApiUrlInput(getApiBase());
+    setApiModalVisible(true);
+  };
+
+  const saveApiUrl = () => {
+    if (apiUrlInput.trim()) {
+      setApiBase(apiUrlInput.trim());
+      setApiModalVisible(false);
+      loadCabinets();
+    }
   };
 
   const handleDeleteCabinet = (cabinetId: number, cabinetName: string) => {
@@ -268,14 +286,22 @@ const CabinetsList = () => {
        </TouchableOpacity>
        
        {/* Debug Test Button */}
-       <TouchableOpacity
-         style={[styles.fab, styles.debugButton]}
-         onPress={loadCabinets}
-       >
-         <Text style={styles.fabText}>🔄</Text>
-       </TouchableOpacity>
-       
-       {/* Search Modal */}
+        <TouchableOpacity
+          style={[styles.fab, styles.debugButton]}
+          onPress={loadCabinets}
+        >
+          <Text style={styles.fabText}>🔄</Text>
+        </TouchableOpacity>
+        
+        {/* API URL Config Button */}
+        <TouchableOpacity
+          style={[styles.fab, styles.apiButton]}
+          onPress={handleApiUrlConfig}
+        >
+          <Text style={styles.fabText}>⚙️</Text>
+        </TouchableOpacity>
+        
+        {/* Search Modal */}
        <SearchComponent
          visible={searchVisible}
          onClose={() => setSearchVisible(false)}
@@ -287,6 +313,42 @@ const CabinetsList = () => {
         imageUrl={selectedImage || ''}
         onClose={() => setSelectedImage(null)}
       />
+
+      {/* API URL Config Modal */}
+      <Modal
+        visible={apiModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setApiModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setApiModalVisible(false)}>
+          <Pressable style={styles.modalContent} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Configure API URL</Text>
+            <TextInput
+              style={styles.apiInput}
+              value={apiUrlInput}
+              onChangeText={setApiUrlInput}
+              placeholder="Enter API base URL"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setApiModalVisible(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton]}
+                onPress={saveApiUrl}
+              >
+                <Text style={styles.modalButtonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -384,6 +446,11 @@ const styles = StyleSheet.create({
     bottom: 140,
     right: 20
   },
+  apiButton: {
+    backgroundColor: '#8E8E93',
+    bottom: 260,
+    right: 20
+  },
   deleteButton: {
     padding: 8,
     borderRadius: 4,
@@ -413,6 +480,55 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center'
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '85%',
+    maxWidth: 400
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    textAlign: 'center'
+  },
+  apiInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    marginBottom: 15
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginHorizontal: 5
+  },
+  cancelButton: {
+    backgroundColor: '#ccc'
+  },
+  saveButton: {
+    backgroundColor: '#007AFF'
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16
   }
 });
 
