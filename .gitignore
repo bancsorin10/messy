@@ -50,3 +50,5 @@ package-lock.json
 *.mp4
 !assets/*.png
 !demo_pics/*
+
+sql/images
